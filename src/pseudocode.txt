@@ -1,0 +1,276 @@
+{ Global variables }
+real list SBL;			{ an ordered list of distinct reals thought of as a stack}
+bound pair list LML;	{ a list of pairs of matching polygon bounds }
+edge list AEL;			{ a list of nonhorizontal edges ordered by x-intercept
+						  with the current scan line }
+polygon list PL;		{ the finished output polygons are stored here as algorithm progresses }
+
+polygon list function Vatti_Clip (polygon subjectP; polygon clipP)
+{ The polygon subjectP is clipped against the polygon clipP.
+  The list of polygons which are the intersection of subjectP and clipP is returned to the
+  calling procedure. }
+begin
+	real yb, yt;
+	Initialize LML, SBL to empty;
+	
+	{ Define LML and the initial SBL }
+	UpdateLMLandSBL (subjectP,subject);
+	UpdateLMLandSBL (clipP,clip);
+	
+	Initialize PL, AEL to empty;
+	yb := PopSBL (); { bottom of current scanbeam }
+	
+	repeat
+		AddNewBoundPairs (yb);	{ modifies AEL and SBL }
+		yt := PopSBL ();		{ top of current scan beam }
+		ProcessIntersections (yb,yt);
+		ProcessEdgesInAEL (yb,yt);
+		yb := yt;
+	until Empty (SBL);
+	
+	return (PL);
+end;
+
+edge = record
+	real 			bottomX, 		{ initially the x-coodinate of the bottom vertex, but once the
+									  edge is on the AEL, then it is the x-intercept of the edge with
+									  the line at the bottom of the current scanbeam }
+					topY,			{ y-coordinate of top vertex }
+					dx; 			{ the reciprocal of the slope of the edge }
+	(clip,subject)	kind;			{ does edge belong to clip or subject polygon? }
+	(left,right) 	side;			{ is it a left or right bound edge? }
+	boolean			contributing;	{ does edge contribute to output polygons? }
+	polygon pointer	adjPolyPtr;		{ pointer to partial polygon associated to the edge }
+end;
+
+procedure UpdateLMLandSBL (closed polygonal curve P; (clip,subject) type)
+{ Finds the bounds of P and adds them to LML. Only the edge fields bottomX, topY,
+  dx, and kind are defined here. The side and adjPolyPtr fields are defined later. Add
+  all local minima and the tops of the first nonhorizontal edge of every bound to SBL. }
+begin
+	for each bound pair BP = (B1,B2) of P do
+	begin
+		Add BP to LML;
+		
+		{ Add the minimum y-value of BP to SBL }
+		InsertIntoSBL (StartY (BP));
+		
+		{ Add the top of the first nonhorizontal edges to SBL }
+		Let ei denote the first nonhorizontal edge of Bi;
+		
+		InsertIntoSBL (TopY (e1));
+		InsertIntoSBL (TopY (e2));
+	end
+end;
+
+real function StartY (bound pair BP)
+{ Returns the minimum y-value of the vertices in BP }
+
+procedure InsertIntoSBL (real y)
+{ If y is not yet in SBL, then insert it at the correct place in the ordered list SBL }
+
+real function PopSBL ()
+{ Delete the smallest (first) element of SBL and return its value }
+
+edge function Succ (edge e)
+{ The edge after e in the polygon bound to which e belongs }
+
+procedure AddNewBoundPairs (real y)
+while not (Empty (LML)) and (first bound pair BP on LML starts at y) do
+begin
+	AddEdgesToAEL (BP,y);
+	Delete BP from LML;
+end;
+
+procedure AddEdgesToAEL (bound pair (B1,B2), real yb)¦
+{ Bound pair (B1,B2) starts at yb }
+begin
+	{ Since bounds are normalized, only B2 can have a horizontal first edge }
+	Let (e1,e2) denote the first nonhorizontal edges of B1 and B2, respectively;
+	
+	InsertIntoSBL (TopY (e1));
+	InsertIntoSBL (TopY (e2));
+	
+	{ Now add edges to AEL and finish their definition }
+	InsertIntoAEL (e1,e2);
+	
+	Let p be the vertex at which both e1 and e2 start;
+	if Contributing (p) then AddLocalMin (e1,e2,p);
+end; { AddEdgesToAEL }
+
+procedure InsertIntoAEL (ref edge e1, e2)
+{ Add nonhorizontal edges e1 and e2 to active edge list maintaining increasing x order.
+  Also set side and contributing fields of e1 and e2 using a parity argument. }
+ 
+procedure AddLocalMin (edge e1, e2; point p);
+{ e1 and e2 are the first nonhorizontal edges of a local minimum. }
+begin
+	Create a new adjacent polygon P[p] for e1;
+	Make the adjPolyPtr field in edge e1 and e2 point to this polygon;
+end;
+
+edge function Next (edge e)
+{ The edge after e in the AEL. }
+
+edge function Previous (edge e)
+{ The edge which precedes e in the AEL. }
+
+procedure ProcessEdgesInAEL (real yb, yt)
+{ Assumption: Polygons have no horizontal edges. }
+begin
+	real dy;
+	boolean moreEdges;
+	
+	if Empty (AEL) then return;
+	
+	dy := yt − yb;
+	Let e denote the first edge of AEL;
+	moreEdges := true;
+	
+	while moreEdges do
+	begin
+		if e terminates at level yt in a vertex p then
+			case Type (p) of
+				left intermediate: begin
+						if Contributing (e) then AddLeft (e,p);
+						Replace e in AEL by Succ (e);
+					end;
+				right intermediate: begin
+						if Contributing (e) then AddRight (e,p);
+						Replace e in AEL by Succ (e);
+					end;
+				local maximum: begin
+						Let nexte denote the edge of AEL after e;
+						if Contributing (e) then AddLocalMax (e,nexte,p);
+						Delete e and nexte from AEL;
+					end;
+			end
+		else SetBottomX (e,TopX (e,dy)); { Update e's bottomX value }
+		
+		Update e to denote the next edge in AEL or
+		set moreEdges to false if there is none;
+	end
+end; { ProcessEdgesInAEL }
+
+procedure AddLeft (edge e; point p);
+	If P[p0p1...pn] is the polygon associated to e, replace it by P[pp0p1...pn];
+
+procedure AddRight (edge e; point p);
+	If P[p0p1...pn] is the polygon associated to e, replace it by P[p0p1...pnp];
+
+procedure AddLocalMax (edge e1, e2; point p);
+begin
+	if Side (e1) = left then AddLeft(e1,p)
+	else AddRight (e1,p);
+	
+	if e1 and e2 have different output polygons
+	then AppendPolygon(e1,e2)
+	else Add polygon to PL;
+end;
+
+procedure AppendPolygon (edge e1, f1);
+{ Let P1 = P[p0p1…pn] and P2 = P[q0q1…qs] be the polygons adjacent
+  to e1 and f1, respectively. Let e2 and f2 be the other top edges of P1 and P2,
+  respectively. }
+	if e1 is a left edge then
+		begin
+			Add vertex list of P2 to the left of vertex list of P1, that is,
+			replace P1 by P[qsqs−1…q0p0p1…pn]
+			Make P1 the adjacent polygon of f2;
+		end
+	else
+		begin
+			Add vertex list of P1 to the right of vertex list of P2, that is,
+			replace P2 by P[q0q1…qspnpn−1…p0]
+			Make P2 the adjacent polygon of e2;
+		end
+end;
+	
+real function TopX (edge e; real dy)
+{ This function returns the x-coordinate of the intersection of the edge with
+  a scan line a height dy above the current one which intersects the edge
+  in a point with x-coordinate BottomX (e). }
+begin
+	return (BottomX (e) + Dx (e)*dy);
+end;
+
+intNode = record
+	edge e1, e2;
+	point intP;
+end;
+
+edge list SEL;
+intNode list IL;
+
+procedure ProcessIntersections (real yb, yt)
+begin
+	if Empty (AEL) then return;
+	
+	BuildIL (yt − yb);
+	ProcessIL ();
+end;
+
+procedure BuildIL (real dy);
+begin
+	real topX1;
+	edge e1;
+	boolean moreEdges;
+	point p;
+	
+	Initialize IL to empty;
+	SEL := { first edge of AEL };
+	
+	for each edge e1 on AEL after the first do
+	begin
+		topX1 := TopX (e1); { top x value of e1 }
+		
+		{ Starting with the rightmost node of SEL we shall now move from right
+		  to left through the nodes of SEL checking for an intersection with e1 }
+		Let e2 denote the rightmost edge of SEL;
+		
+		moreEdges := true;
+		
+		while moreEdges and (topX1 < TopX (e2) do
+		begin
+			p := IntersectionOf (e1,e2);
+			Insert intNode (e1,e2,p) into IL;
+			
+			if e2 is the left-most edge in SEL
+			then moreEdges := false;
+			else update e2 to denote edge to its left in SEL;
+		end;
+		
+		{ Now insert e1 into SEL at the point where we quit the while loop.
+		  If moreEdges is false then e2 had reached the left end of SEL. }
+		if moreEdges
+		then Insert e1 to the right of e2 in SEL
+		else Insert e1 at the left end of SEL;
+	end
+end; { BuildIL }
+
+procedure ProcessIL ()
+begin
+	for each intNode (e1,e2,p) in IL do
+	begin
+		{ e1 precedes e2 in AEL and p is point of intersection }
+		
+		case IntersectionType (p) of
+			like edge intersection : if Contributing (e1) then
+				begin
+					AddLeft (e1,p);
+					AddRight (e2,p);
+					Exchange side values of edges;
+				end;
+			local maximum : AddLocalMax (e1,e2,p);
+			left intersection : AddLeft (e2,p);
+			right intersection : AddRight (e1,p);
+			local minimum : AddLocalMin (e1,e2,p);
+		end;
+		
+		Swap e1 and e2 position in AEL;
+		Exchange adjPolyPtr pointers in edges;
+	end
+end; { ProcessIL }
+
+point function IntersectionOf (edge e1, e2)
+{ This function returns the intersection of the two edges e1 and e2. }
