@@ -76,10 +76,12 @@ edge function Succ (edge e)
 { The edge after e in the polygon bound to which e belongs }
 
 procedure AddNewBoundPairs (real y)
-while not (Empty (LML)) and (first bound pair BP on LML starts at y) do
 begin
-	AddEdgesToAEL (BP,y);
-	Delete BP from LML;
+	while not (Empty (LML)) and (first bound pair BP on LML starts at y) do
+	begin
+		AddEdgesToAEL (BP,y);
+		Delete BP from LML;
+	end
 end;
 
 procedure AddEdgesToAEL (bound pair (B1,B2), real yb)¦

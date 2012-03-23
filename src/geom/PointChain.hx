@@ -40,6 +40,22 @@ class PointChain {
 	}
 	
 	/**
+	 * @return	List of points starting at the current point and ending at the last in chain or just before the
+	 * 	current in case of circular chain.
+	 * @warning	This method may cause infinite looping if:
+	 *	1) pair of intermediate chain nodes points at each other
+	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
+	 */
+	public function toList ():List <Point> {
+		var list = new List <Point> ();
+		
+		for ( point in this.iterator () )
+			list.add ( point );
+		
+		return	list;
+	}
+	
+	/**
 	 * @return	Forward iterator starting at the current point and ending at the last in chain or just before the
 	 * 	current in case of circular chain.
 	 * @warning	Iterating may cause infinite looping if:
@@ -102,6 +118,52 @@ class PointChain {
 	public inline function removePrev ():Void {
 		if ( this.prev != null )
 			this.prev.removeSelf ();
+	}
+	
+	/**
+	 * @return	First node which has its prev pointer set to null or itself in case of circular chain.
+	 * 	It returns itself also in the case when this node is single node in chain.
+	 * @warning	This method may cause infinite looping if:
+	 *	1) pair of intermediate chain nodes points at each other
+	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
+	 */
+	public inline function first ():PointChain {
+		var cur = this;
+		
+		while ( cur.prev != null ) {
+			cur = cur.prev;
+			
+			if ( cur == this ) {
+				// This is a curcular chain
+				
+				return	this;
+			}
+		}
+		
+		return	cur;
+	}
+	
+	/**
+	 * @return	Last node which has its next pointer set to null or previous to itself in case of circular chain
+	 * 	or itself if this node is single node in chain.
+	 * @warning	This method may cause infinite looping if:
+	 *	1) pair of intermediate chain nodes points at each other
+	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
+	 */
+	public inline function last ():PointChain {
+		var cur = this;
+		
+		while ( cur.next != null ) {
+			cur = cur.next;
+			
+			if ( cur == this ) {
+				// This is a curcular chain
+				
+				return	this.prev;
+			}
+		}
+		
+		return	cur;
 	}
 	
 	public function toString ():String {
