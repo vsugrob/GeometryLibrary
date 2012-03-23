@@ -9,9 +9,13 @@ import flash.geom.Point;
 
 class VattiClipper {
 	/**
-	 * Pointer to first node of the signle-linked list of local maximas.
+	 * Pointer to first node of the singly-linked list of local maximas.
 	 */
 	private var lml:LocalMaxima;
+	/**
+	 * Pointer to first node of the singly-linked list of scanbeams.
+	 */
+	private var sbl:Scanbeam;
 	
 	public function new () { }
 	
@@ -33,7 +37,7 @@ class VattiClipper {
 		var p0:Point = it.next ();
 		var prevEdge:Edge = null;
 		var firstEdge:Edge = null;
-		var prevDy:Float = 0;
+		var prevDy:Float = 0;	// Previous non-zero delta y
 		var lastJointIsLocalMimima:Bool = false;
 		var firstJointIsLocalMimima:Null <Bool> = null;
 		
@@ -107,16 +111,17 @@ class VattiClipper {
 		if ( firstEdge != null ) {	// It may be null if pts contains only one point
 			/* Note that at this point prevEdge contains last edge
 			 * and p0 coincides with first point of the polygon. */
+			var lastEdge:Edge = prevEdge;
 			
 			if ( firstEdge.successor == null ) {
-				if ( prevEdge.successor == null ) {
+				if ( lastEdge.successor == null ) {
 					if ( firstJointIsLocalMimima ) {
 						if ( lastJointIsLocalMimima )
-							addLocalMaximum ( prevEdge, firstEdge, p0.y );	// [Case 1]
+							addLocalMaximum ( lastEdge, firstEdge, p0.y );	// [Case 1]
 						else
-							prevEdge.successor = firstEdge;	// [Case 2]
+							lastEdge.successor = firstEdge;	// [Case 2]
 					} else if ( lastJointIsLocalMimima ) {
-						firstEdge.successor = prevEdge;	// [Case 3]
+						firstEdge.successor = lastEdge;	// [Case 3]
 						
 						if ( firstEdge.isHorizontal )
 							reverseHorizontalEdge ( firstEdge );	// [Case 3 subcase]
@@ -124,30 +129,30 @@ class VattiClipper {
 						if ( firstEdge.isHorizontal )
 							reverseHorizontalEdge ( firstEdge );	// [Case 4 subcase]
 						else {
-							// [Case 4]
+							// Pure local minimum, [Case 4]
 						}
 					}
 				} else {
 					if ( firstJointIsLocalMimima ) {
-						addLocalMaximum ( prevEdge, firstEdge, p0.y );	// [Case 5]
+						addLocalMaximum ( lastEdge, firstEdge, p0.y );	// [Case 5]
 						
-						if ( prevEdge.isHorizontal )
-							reverseHorizontalEdge ( prevEdge );	// [Case 5 subcase]
+						if ( lastEdge.isHorizontal )
+							reverseHorizontalEdge ( lastEdge );	// [Case 5 subcase]
 					} else {
-						firstEdge.successor = prevEdge;	// [Case 6]
+						firstEdge.successor = lastEdge;	// [Case 6]
 						
 						if ( firstEdge.isHorizontal )
 							reverseHorizontalEdge ( firstEdge );	// [Case 6 subcase]
 					}
 				}
 			} else {
-				if ( prevEdge.successor == null ) {
+				if ( lastEdge.successor == null ) {
 					if ( lastJointIsLocalMimima )
-						addLocalMaximum ( prevEdge, firstEdge, p0.y );	// [Case 7]
+						addLocalMaximum ( lastEdge, firstEdge, p0.y );	// [Case 7]
 					else
-						prevEdge.successor = firstEdge;	// [Case 8]
+						lastEdge.successor = firstEdge;	// [Case 8]
 				} else	// Local maximum
-					addLocalMaximum ( prevEdge, firstEdge, p0.y );	// [Case 9]
+					addLocalMaximum ( lastEdge, firstEdge, p0.y );	// [Case 9]
 			}
 		}
 	}
@@ -162,6 +167,23 @@ class VattiClipper {
 			
 			if ( lm.y >= lml.y )
 				lml = lm;
+		}
+		
+		addScanbeam ( y );
+		addScanbeam ( edge1.topY );
+		addScanbeam ( edge2.topY );
+	}
+	
+	private inline function addScanbeam ( y:Float ):Void {
+		var sb = new Scanbeam ( y );
+		
+		if ( sbl == null )
+			sbl = sb;
+		else {
+			sbl.insert ( sb );
+			
+			if ( sb.y > sbl.y )
+				sbl = sb;
 		}
 	}
 	
@@ -211,5 +233,21 @@ class VattiClipper {
 			startY = edge.topY;
 			edge = edge.successor;
 		} while ( edge != null );
+	}
+	
+	public function drawSbl ( graphics:Graphics, startX:Float, width:Float ):Void {
+		var sb = sbl;
+		var num:Int = 0;
+		
+		do {
+			graphics.lineStyle ( 1, 0xd45500 );
+			graphics.moveTo ( startX, sb.y );
+			graphics.lineTo ( startX + width, sb.y );
+			
+			sb = sb.next;
+			num++;
+		} while ( sb != null );
+		
+		trace ( "there are " + num + " scanbeams" );
 	}
 }

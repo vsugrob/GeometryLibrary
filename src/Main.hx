@@ -94,12 +94,12 @@ class Main {
 		subject.push ( subject.shift () );
 		subject.push ( subject.shift () );*/
 		
-		var subject = [
+		/*var subject = [
 			new Point ( 0, 50 ),
 			new Point ( 50, 25 ),
 			new Point ( 100, 50 ),
 			new Point ( 50, 0 )
-		];
+		];*/
 		
 		/*var subject = [
 			new Point ( 50, 50 ),
@@ -118,5 +118,6 @@ class Main {
 		stage.addChild ( debugSprite );
 		
 		clipper.drawLml ( debugSprite.graphics );
+		clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );
 	}
 }
