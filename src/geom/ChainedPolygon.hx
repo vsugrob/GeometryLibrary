@@ -7,10 +7,10 @@ import flash.geom.Point;
  */
 
 class ChainedPolygon {
-	public var first:PointChain;
-	public var last:PointChain;
+	public var first:DoublyList <Point>;
+	public var last:DoublyList <Point>;
 	
-	public function new ( first:PointChain, last:PointChain ) {
+	public function new ( first:DoublyList <Point>, last:DoublyList <Point> ) {
 		this.first = first;
 		this.last = last;
 	}

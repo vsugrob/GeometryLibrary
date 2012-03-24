@@ -6,19 +6,19 @@ import flash.geom.Point;
  * @author vsugrob
  */
 
-class PointChainIterator {
-	private var startPoint:PointChain;
-	private var curPoint:PointChain;
+class DoublyListIterator <TElement> {
+	private var startPoint:DoublyList <TElement>;
+	private var curPoint:DoublyList <TElement>;
 	private var reverse:Bool;
 	
-	public function new ( startPoint:PointChain, reverse:Bool = false ) {
+	public function new ( startPoint:DoublyList <TElement>, reverse:Bool = false ) {
 		this.startPoint = startPoint;
 		this.curPoint = startPoint;
 		this.reverse = reverse;
 	}
 	
-	public function next ():Point {
-		var p = curPoint.p;
+	public function next ():TElement {
+		var p = curPoint.value;
 		curPoint = reverse ? curPoint.prev : curPoint.next;
 		
 		if ( curPoint == startPoint )

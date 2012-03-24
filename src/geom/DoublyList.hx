@@ -1,98 +1,97 @@
 package geom;
-import flash.geom.Point;
 
 /**
  * ...
  * @author vsugrob
  */
 
-class PointChain {
-	public var p:Point;
-	public var prev:PointChain;
-	public var next:PointChain;
+class DoublyList <TElement> {
+	public var value:TElement;
+	public var prev:DoublyList <TElement>;
+	public var next:DoublyList <TElement>;
 	
-	public function new ( p:Point, prev:PointChain = null, next:PointChain = null ) {
-		this.p = p;
+	public function new ( value:TElement, prev:DoublyList <TElement> = null, next:DoublyList <TElement> = null ) {
+		this.value = value;
 		this.prev = prev;
 		this.next = next;
 	}
 	
-	public static function fromIterable ( it:Iterator <Point> , close:Bool = true ):PointChain {
+	public static function fromIterable <TElement> ( it:Iterator <TElement>, close:Bool = true ):DoublyList <TElement> {
 		if ( !it.hasNext () )
 			return	null;
 		
-		var pc0 = new PointChain ( it.next () );
-		var pc1:PointChain;
-		var pcStart = pc0;
+		var dl0 = new DoublyList <TElement> ( it.next () );
+		var dl1:DoublyList <TElement>;
+		var dlStart = dl0;
 		
-		for ( point in it ) {
-			pc1 = new PointChain ( point, pc0 );
-			pc0.next = pc1;
-			pc0 = pc1;
+		for ( element in it ) {
+			dl1 = new DoublyList <TElement> ( element, dl0 );
+			dl0.next = dl1;
+			dl0 = dl1;
 		}
 		
 		if ( close ) {
-			pc1.next = pcStart;
-			pcStart.prev = pc1;
+			dl1.next = dlStart;
+			dlStart.prev = dl1;
 		}
 		
-		return	pcStart;
+		return	dlStart;
 	}
 	
 	/**
-	 * @return	List of points starting at the current point and ending at the last in chain or just before the
+	 * @return	List of elements starting at the current element and ending at the last in chain or just before the
 	 * 	current in case of circular chain.
 	 * @warning	This method may cause infinite looping if:
-	 *	1) pair of intermediate chain nodes points at each other
+	 *	1) pair of intermediate chain nodes points to each other
 	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
 	 */
-	public function toList ():List <Point> {
-		var list = new List <Point> ();
+	public function toList ():List <TElement> {
+		var list = new List <TElement> ();
 		
-		for ( point in this.iterator () )
-			list.add ( point );
+		for ( element in this.iterator () )
+			list.add ( element );
 		
 		return	list;
 	}
 	
 	/**
-	 * @return	Forward iterator starting at the current point and ending at the last in chain or just before the
+	 * @return	Forward iterator starting at the current element and ending at the last in chain or just before the
 	 * 	current in case of circular chain.
 	 * @warning	Iterating may cause infinite looping if:
-	 *	1) pair of intermediate chain nodes points at each other
+	 *	1) pair of intermediate chain nodes points to each other
 	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
 	 */
-	public function iterator ():Iterator <Point> {
-		return	new PointChainIterator ( this );
+	public function iterator ():Iterator <TElement> {
+		return	new DoublyListIterator <TElement> ( this );
 	}
 	
 	/**
-	 * @return	Backward iterator starting at the current point and ending at the first in chain or just after the
+	 * @return	Backward iterator starting at the current element and ending at the first in chain or just after the
 	 * 	current in case of circular chain.
 	 * @warning	Iterating may cause infinite looping if:
-	 *	1) pair of intermediate chain nodes points at each other
+	 *	1) pair of intermediate chain nodes points to each other
 	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
 	 */
-	public function reverse ():Iterator <Point> {
-		return	new PointChainIterator ( this, true );
+	public function reverse ():Iterator <TElement> {
+		return	new DoublyListIterator <TElement> ( this, true );
 	}
 	
-	public inline function insertNext ( point:Point ):Void {
-		var pc = new PointChain ( point, this, this.next );
+	public inline function insertNext ( element:TElement ):Void {
+		var dl = new DoublyList <TElement> ( element, this, this.next );
 		
 		if ( this.next != null )
-			this.next.prev = pc;
+			this.next.prev = dl;
 		
-		this.next = pc;
+		this.next = dl;
 	}
 	
-	public inline function insertPrev ( point:Point ):Void {
-		var pc = new PointChain ( point, this.prev, this );
+	public inline function insertPrev ( element:TElement ):Void {
+		var dl = new DoublyList <TElement> ( element, this.prev, this );
 		
 		if ( this.prev != null )
-			this.prev.next = pc;
+			this.prev.next = dl;
 		
-		this.prev = pc;
+		this.prev = dl;
 	}
 	
 	/**
@@ -124,10 +123,10 @@ class PointChain {
 	 * @return	First node which has its prev pointer set to null or itself in case of circular chain.
 	 * 	It returns itself also in the case when this node is single node in chain.
 	 * @warning	This method may cause infinite looping if:
-	 *	1) pair of intermediate chain nodes points at each other
+	 *	1) pair of intermediate chain nodes points to each other
 	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
 	 */
-	public inline function first ():PointChain {
+	public inline function first ():DoublyList <TElement> {
 		var cur = this;
 		
 		while ( cur.prev != null ) {
@@ -147,10 +146,10 @@ class PointChain {
 	 * @return	Last node which has its next pointer set to null or previous to itself in case of circular chain
 	 * 	or itself if this node is single node in chain.
 	 * @warning	This method may cause infinite looping if:
-	 *	1) pair of intermediate chain nodes points at each other
+	 *	1) pair of intermediate chain nodes points to each other
 	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
 	 */
-	public inline function last ():PointChain {
+	public inline function last ():DoublyList <TElement> {
 		var cur = this;
 		
 		while ( cur.next != null ) {
@@ -167,7 +166,8 @@ class PointChain {
 	}
 	
 	public function toString ():String {
-		var str = "{p: " + p.toString () + ", ";
+		var dValue:Dynamic = value;
+		var str = "{element: " + dValue.toString () + ", ";
 		
 		if ( next == null && prev == null )
 			str += "single";
@@ -178,7 +178,7 @@ class PointChain {
 		else
 			str += "intermediate";
 		
-		str += " point}";
+		str += " element}";
 		
 		return	str;
 	}

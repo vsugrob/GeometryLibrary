@@ -8,7 +8,7 @@ import flash.Lib;
 import geom.clipper.LocalMaxima;
 import geom.clipper.Side;
 import geom.clipper.VattiClipper;
-import geom.PointChain;
+import geom.DoublyList;
 
 /**
  * ...
@@ -21,8 +21,8 @@ class Main {
 		stage.scaleMode = StageScaleMode.NO_SCALE;
 		stage.align = StageAlign.TOP_LEFT;
 		
-		/*var v0 = new PointChain ( new Point ( 10, 14 ) );
-		var v1 = new PointChain ( new Point ( 1988, 1 ), v0 );
+		/*var v0 = new DoublyList <Point> ( new Point ( 10, 14 ) );
+		var v1 = new DoublyList <Point> ( new Point ( 1988, 1 ), v0 );
 		v0.next = v1;
 		
 		for ( p in v1.reverse () )
@@ -30,7 +30,7 @@ class Main {
 		
 		
 		/*var pts = [new Point ( 1, 1 ), new Point ( 2, 2 ), new Point ( 3, 3 )];
-		var pc0 = PointChain.fromIterable ( pts.iterator () );
+		var pc0 = DoublyList.fromIterable ( pts.iterator () );
 		pc0.next.insertPrev ( new Point ( 14, 14 ) );
 		
 		pc0.removeNext ();
@@ -40,7 +40,7 @@ class Main {
 		
 		
 		/*var pts = [new Point ( 1, 1 ), new Point ( 2, 2 ), new Point ( 3, 3 )];
-		var pc0 = PointChain.fromIterable ( pts.iterator () );
+		var pc0 = DoublyList.fromIterable ( pts.iterator () );
 		
 		trace ( "]Chain:" );
 		
@@ -52,6 +52,7 @@ class Main {
 		
 		trace ( "]Last:" );
 		trace ( pc0.last () );*/
+		
 		
 		/*var lm0:LocalMaxima = new LocalMaxima ( null, null, 10 );
 		var lm1:LocalMaxima = new LocalMaxima ( null, null, 9 );
@@ -101,11 +102,11 @@ class Main {
 			new Point ( 50, 0 )
 		];*/
 		
-		/*var subject = [
+		var subject = [
 			new Point ( 50, 50 ),
 			new Point ( 100, 0 ),
 			new Point ( 0, 0 ),
-		];*/
+		];
 		
 		subject.push ( subject [0] );
 		
