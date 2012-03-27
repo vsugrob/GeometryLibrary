@@ -27,6 +27,10 @@ class VattiClipper {
 	 * List of polygons being formed during clipping operation.
 	 */
 	private var outPolys:List <ChainedPolygon>;
+	/**
+	 * List of intersections calculated in buildIntersectionList ().
+	 */
+	private var il:Intersection;
 	
 	public function new () {
 		this.outPolys = new List <ChainedPolygon> ();
@@ -439,7 +443,7 @@ class VattiClipper {
 		edge.poly.appendPoint ( p );
 	}
 	
-	private inline function topX ( edge:Edge, dy:Float ):Float {
+	private static inline function topX ( edge:Edge, dy:Float ):Float {
 		return	edge.bottomX + edge.dx * dy;
 	}
 	
@@ -511,12 +515,156 @@ class VattiClipper {
 	}
 	
 	private function processIntersections ( yb:Float, yt:Float ):Void {
+		if ( ael == null )
+			return;
+		
 		buildIntersectionList ( yt - yb );
-		//processIntersectionList ();
+		processIntersectionList ();
 	}
 	
 	private function buildIntersectionList ( dy:Float ):Void {
+		il = null; // Initialize IL to empty;
 		
+		// Set Sorted Edge List to first node in Active Edge List
+		var selLeft = new DoublyList <DoublyList <Edge>> ( ael );
+		var selRight = selLeft;
+		
+		var e1Node = ael.next;
+		
+		while ( e1Node != null ) {
+			var e1 = e1Node.value;
+			var topX1 = topX ( e1, dy );
+			
+			/* Starting with the rightmost node of SEL we shall now move from right
+			 * to left through the nodes of SEL checking for an intersection with e1.
+			 * Let e2 denote the rightmost edge of SEL. */
+			var e2Node = selRight;
+			
+			// TODO: cache top x-es.
+			while ( e2Node != null && topX1 < topX ( e2Node.value.value, dy ) ) {
+				var p = intersectionOf ( e1, e2Node.value.value );
+				addIntersection ( e1Node, e2Node.value, p );
+				
+				// Update e2 to denote edge to its left in SEL
+				e2Node = e2Node.prev;
+			}
+			
+			// Now insert e1 into SEL at the point where we quit the while loop
+			if ( e2Node != null ) {
+				// Insert e1 to the right of e2 in SEL
+				if ( e2Node.next == null ) {
+					e2Node.insertNext ( e1Node );
+					selRight = e2Node.next;
+				} else
+					e2Node.insertNext ( e1Node );
+			} else {
+				// Insert e1 at the left end of SEL
+				selLeft.insertPrev ( e1Node );
+				selLeft = selLeft.prev;
+			}
+		}
+	}
+	
+	private inline function addIntersection ( e1Node:DoublyList <Edge>, e2Node:DoublyList <Edge>, p:Point ):Void {
+		var isec = new Intersection ( e1Node, e2Node, p );
+		
+		if ( il == null )
+			il = isec;
+		else {
+			il.insert ( isec );
+			
+			if ( p.y > il.p.y )
+				il = isec;
+		}
+	}
+	
+	/**
+	 * Finds intersection point of two edges. Note that it should be known apriori that two given
+	 * edges intersects. This function only calculates where exactly intersection is and it may have
+	 * unpredicted behavior in case when edges are parallel to each other.
+	 * @param	e1	First edge known to intersect other edge.
+	 * @param	e2	Second edge.
+	 * @return	Point of intersection between two edges.
+	 */
+	private static inline function intersectionOf ( e1:Edge, e2:Edge ):Point {
+		/* ix, iy		- isec point
+		 * bx1, bx2		- bottom x-es of the edges
+		 * idy			- is eq to: iy minus bottom of the scanbeam
+		 * 
+		 * Given:
+		 *	ix == bx1 + dx1 * idy == bx2 + dx2 * idy
+		 * Rearrange:
+		 *	bx1 - bx2 == ( dx2 - dx1 ) * idy
+		 * Get the idy (and therefore iy too):
+		 *	idy == ( bx1 - bx2 ) / ( dx2 - dx1 )
+		 * Get the ix:
+		 *	ix == bx1 + dx1 * idy */
+		
+		var idy = ( e1.bottomX - e2.bottomX ) / ( e2.dx - e1.dx );
+		var p = new Point ( topX ( e1, idy ), e1.topY - idy );
+		
+		return	p;
+	}
+	
+	private function processIntersectionList ():Void {
+		var isec = il;
+		
+		do {
+			/* Quote from VattiClip.pdf: "e1 precedes e2 in AEL and p is point of intersection".
+			 * TODO: check whether their order really matters?
+			 * UPD: yes, it is. It's important for further classification like LS ∩ RC etc.
+			 *  But where should we order edges, here or in buildIntersectionList ()?*/
+			var e1 = isec.e1Node.value;
+			var e2 = isec.e2Node.value;
+			
+			if ( e1.poly == e2.poly ) {	// like edge intersection
+				if ( e1.contributing ) {
+					addLeft ( e1, isec.p );
+					addRight ( e2, isec.p );
+					
+					// Exchange side values of edges
+					// TODO: investigate whether we should exchange sides
+					//	even when edge is not contributing?
+					var tmpSide = e1.side;
+					e1.side = e2.side;
+					e2.side = tmpSide;
+				}
+			} else if ( ( e1.side == Side.Left  && e1.kind == PolyKind.Subject &&
+						  e2.side == Side.Right && e2.kind == PolyKind.Clip ) ||
+						( e1.side == Side.Left  && e1.kind == PolyKind.Clip &&
+						  e2.side == Side.Right && e2.kind == PolyKind.Subject ) )	// (LS ∩ RC) or (LC ∩ RS) → MX
+			{
+				addLocalMin ( e1, e2, isec.p );
+			} else if ( ( e1.side == Side.Left && e1.kind == PolyKind.Clip &&
+						  e2.side == Side.Left && e2.kind == PolyKind.Subject ) ||
+						( e1.side == Side.Left && e1.kind == PolyKind.Subject &&
+						  e2.side == Side.Left && e2.kind == PolyKind.Clip ) )		// (LC ∩ LS) or (LS ∩ LC) → LI
+			{
+				addLeft ( e2, isec.p );
+			} else if ( ( e1.side == Side.Right && e1.kind == PolyKind.Clip &&
+						  e2.side == Side.Right && e2.kind == PolyKind.Subject ) ||
+						( e1.side == Side.Right && e1.kind == PolyKind.Subject &&
+						  e2.side == Side.Right && e2.kind == PolyKind.Clip ) )		// (RC ∩ RS) or (RS ∩ RC) → RI
+			{
+				addRight ( e1, isec.p );
+			} else if ( ( e1.side == Side.Right && e1.kind == PolyKind.Subject &&
+						  e2.side == Side.Left  && e2.kind == PolyKind.Clip ) ||
+						( e1.side == Side.Right && e1.kind == PolyKind.Clip &&
+						  e2.side == Side.Left  && e2.kind == PolyKind.Subject ) )	// (RS ∩ LC) or (RC ∩ LS) → MN
+			{
+				addLocalMax ( e1, e2, isec.p );
+			}
+			
+			// Swap e1 and e2 position in AEL
+			DoublyList.swap ( isec.e1Node, isec.e2Node );
+			
+			// Exchange adjPolyPtr pointers in edges
+			var tmpPoly = e1.poly;
+			e1.poly = e2.poly;
+			e2.poly = tmpPoly;
+			
+			isec = isec.next;
+		} while ( isec != null );
 	}
 	
 	private static function getRandomColor ():UInt {

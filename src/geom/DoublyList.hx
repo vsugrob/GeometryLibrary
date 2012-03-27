@@ -165,6 +165,19 @@ class DoublyList <TElement> {
 		return	cur;
 	}
 	
+	/**
+	 * Swap positions of two elements. Note that elements not necessarily belongs to the same list.
+	 */
+	public static inline function swap <TElement> ( a:DoublyList <TElement>, b:DoublyList <TElement> ):Void {
+		var tmp = a.next;
+		a.next = b.next;
+		b.next = tmp;
+		
+		tmp = a.prev;
+		a.prev = b.prev;
+		b.prev = tmp;
+	}
+	
 	public function toString ():String {
 		var dValue:Dynamic = value;
 		var str = "{element: " + dValue.toString () + ", ";
