@@ -65,15 +65,15 @@ class Main {
 		lm0.insert ( lm4 );*/
 		
 		
-		/*var subject = [
+		var subject = [
 			new Point ( 0, 50 ),
 			new Point ( 50, 100 ),
 			new Point ( 100, 50 ),
 			new Point ( 50, 0 )
 		];
 		
-		subject.push ( subject.shift () );
-		subject.push ( subject.shift () );*/
+		//subject.push ( subject.shift () );
+		//subject.push ( subject.shift () );
 		
 		/*var subject = [
 			new Point ( 0, 50 ),
@@ -102,16 +102,24 @@ class Main {
 			new Point ( 50, 0 )
 		];*/
 		
-		var subject = [
+		/*var subject = [
 			new Point ( 50, 50 ),
 			new Point ( 100, 0 ),
 			new Point ( 0, 0 ),
+		];*/
+		
+		var clip = [
+			new Point ( 60, 20 ),
+			new Point ( 20, 90 ),
+			new Point ( 40, 130 ),
+			new Point ( 120, 40 ),
 		];
 		
 		subject.push ( subject [0] );
+		clip.push ( clip [0] );
 		
 		var clipper = new VattiClipper ();
-		clipper.clip ( subject, null );
+		clipper.clip ( subject, clip );
 		
 		var debugSprite = new Sprite ();
 		debugSprite.x = 50;
