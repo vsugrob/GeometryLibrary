@@ -624,14 +624,12 @@ class VattiClipper {
 				if ( e1.contributing ) {
 					addLeft ( e1, isec.p );
 					addRight ( e2, isec.p );
-					
-					// Exchange side values of edges
-					// TODO: investigate whether we should exchange sides
-					//	even when edge is not contributing?
-					var tmpSide = e1.side;
-					e1.side = e2.side;
-					e2.side = tmpSide;
 				}
+				
+				// Exchange side values of edges
+				var tmpSide = e1.side;
+				e1.side = e2.side;
+				e2.side = tmpSide;
 			} else if ( ( e1.side == Side.Left  && e1.kind == PolyKind.Subject &&
 						  e2.side == Side.Right && e2.kind == PolyKind.Clip ) ||
 						( e1.side == Side.Left  && e1.kind == PolyKind.Clip &&
@@ -656,6 +654,8 @@ class VattiClipper {
 						  e2.side == Side.Left  && e2.kind == PolyKind.Subject ) )	// (RS ∩ LC) or (RC ∩ LS) → MN
 			{
 				addLocalMax ( e1, e2, isec.p );
+				e1.contributing = true;
+				e2.contributing = true;
 			}
 			
 			// Swap e1 and e2 position in AEL
