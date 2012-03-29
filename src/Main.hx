@@ -21,82 +21,7 @@ class Main {
 		stage.scaleMode = StageScaleMode.NO_SCALE;
 		stage.align = StageAlign.TOP_LEFT;
 		
-		/* // Test swaps
-		var n0 = new DoublyList <Int> ( 1 );
-		n0.insertNext ( 2 );
-		n0.next.insertNext ( 3 );
-		
-		var a = n0;
-		var b = n0.next;
-		DoublyList.swap ( b, a );
-		
-		var n = b;
-		var str = "";
-		
-		while ( n != null ) {
-			str += n.value + " ";
-			n = n.next;
-		}
-		
-		trace ( str );
-		
-		return;*/
-		
-		/*var v0 = new DoublyList <Point> ( new Point ( 10, 14 ) );
-		var v1 = new DoublyList <Point> ( new Point ( 1988, 1 ), v0 );
-		v0.next = v1;
-		
-		for ( p in v1.reverse () )
-			trace ( p );*/
-		
-		
-		/*var pts = [new Point ( 1, 1 ), new Point ( 2, 2 ), new Point ( 3, 3 )];
-		var pc0 = DoublyList.fromIterable ( pts.iterator () );
-		pc0.next.insertPrev ( new Point ( 14, 14 ) );
-		
-		pc0.removeNext ();
-		
-		for ( p in pc0 )
-			trace ( p );*/
-		
-		
-		/*var pts = [new Point ( 1, 1 ), new Point ( 2, 2 ), new Point ( 3, 3 )];
-		var pc0 = DoublyList.fromIterable ( pts.iterator () );
-		
-		trace ( "]Chain:" );
-		
-		for ( p in pc0 )
-			trace ( p );
-		
-		trace ( "]First:" );
-		trace ( pc0.first () );
-		
-		trace ( "]Last:" );
-		trace ( pc0.last () );*/
-		
-		
-		/*var lm0:LocalMaxima = new LocalMaxima ( null, null, 10 );
-		var lm1:LocalMaxima = new LocalMaxima ( null, null, 9 );
-		var lm2:LocalMaxima = new LocalMaxima ( null, null, 7 );
-		var lm3:LocalMaxima = new LocalMaxima ( null, null, 8 );
-		var lm4:LocalMaxima = new LocalMaxima ( null, null, 12 );
-		lm0.insert ( lm1 );
-		lm0.insert ( lm2 );
-		lm0.insert ( lm3 );
-		lm0.insert ( lm4 );*/
-		
-		
 		/*var subject = [
-			new Point ( 0, 50 ),
-			new Point ( 50, 100 ),
-			new Point ( 150, 75 ),
-			new Point ( 50, 0 )
-		];
-		
-		//subject.push ( subject.shift () );
-		//subject.push ( subject.shift () );*/
-		
-		var subject = [
 			new Point ( 0, 50 ),
 			new Point ( 30, 100 ),
 			new Point ( 40, 75 ),
@@ -105,44 +30,40 @@ class Main {
 			new Point ( 50, 0 )
 		];
 		
-		/*var subject = [
-			new Point ( 0, 50 ),
-			new Point ( 50, 100 ),
-			new Point ( 100, 50 ),
-			new Point ( 150, 100 ),
-			new Point ( 200, 50 ),
-			new Point ( 100, 0 )
-		];*/
-		
-		/*var subject = [
-			new Point ( 0, 0 ),
-			new Point ( 100, 0 ),
-			new Point ( 100, 100 ),
-			new Point ( 0, 100 )
-		];
-		
-		subject.push ( subject.shift () );
-		subject.push ( subject.shift () );
-		subject.push ( subject.shift () );*/
-		
-		/*var subject = [
-			new Point ( 0, 50 ),
-			new Point ( 50, 25 ),
-			new Point ( 100, 50 ),
-			new Point ( 50, 0 )
-		];*/
-		
-		/*var subject = [
-			new Point ( 50, 50 ),
-			new Point ( 100, 0 ),
-			new Point ( 0, 0 ),
-		];*/
-		
 		var clip = [
 			new Point ( 60, 20 ),
 			new Point ( 20, 90 ),
 			new Point ( 40, 130 ),
 			new Point ( 120, 40 ),
+		];*/
+		
+		/*var subject = [
+			new Point ( 10, 10 ),
+			new Point ( 0, 300 ),
+			new Point ( 300, 600 ),
+			new Point ( 600, 300 ),
+			new Point ( 300, 0 )
+		];
+		
+		var clip = [
+			new Point ( 100, 300 ),
+			new Point ( 200, 290 ),
+			new Point ( 100, 100 ),
+			new Point ( 200, 110 ),
+		];*/
+		
+		var subject = [
+			new Point ( 0, 100 ),
+			new Point ( 100, 200 ),
+			new Point ( 200, 100 ),
+			new Point ( 100, 0 )
+		];
+		
+		var clip = [
+			new Point ( 100, 300 ),
+			new Point ( 200, 290 ),
+			new Point ( 100, 100 ),
+			new Point ( 200, 110 ),
 		];
 		
 		subject.push ( subject [0] );
@@ -159,8 +80,8 @@ class Main {
 		clipper.drawLml ( debugSprite.graphics );
 		clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );
 		
-		VattiClipper.drawPoly ( subject, debugSprite.graphics );
-		VattiClipper.drawPoly ( clip, debugSprite.graphics );
+		VattiClipper.drawPoly ( subject, debugSprite.graphics, 0x777777, 0.7, 1, 0xffdd77, 0.5 );
+		VattiClipper.drawPoly ( clip, debugSprite.graphics, 0x777777, 0.7, 1, 0x77ddff, 0.5 );
 		clipper.drawOutPolys ( debugSprite.graphics );
 	}
 }

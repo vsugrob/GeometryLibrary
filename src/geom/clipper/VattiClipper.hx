@@ -617,7 +617,10 @@ class VattiClipper {
 			var e1 = isec.e1Node.value;
 			var e2 = isec.e2Node.value;
 			
-			if ( e1.poly == e2.poly && e1.poly != null ) {	// like edge intersection
+			if ( e1.kind == e2.kind ) {
+				/* Like edge intersection:
+				 * (LC ∩ RC) or (RC ∩ LC) → LI and RI
+				 * (LS ∩ RS) or (RS ∩ LS) → LI and RI */
 				if ( e1.contributing ) {
 					addLeft ( e1, isec.p );
 					addRight ( e2, isec.p );
@@ -737,7 +740,7 @@ class VattiClipper {
 	
 	public static function drawPoly ( pts:Iterable <Point>, graphics:Graphics,
 		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
-		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
+		fill:Null <UInt> = null, fillOpacity = 0.5, stopOnNthVertex:Null <Int> = null ):Void
 	{
 		if ( stroke == null )
 			stroke = getRandomColor ();
@@ -757,18 +760,24 @@ class VattiClipper {
 		graphics.beginFill ( fill, fillOpacity );
 		graphics.moveTo ( p.x, p.y );
 		
-		while ( it.hasNext () ) {
+		var i = 0;
+		
+		if ( stopOnNthVertex == null )
+			stopOnNthVertex = 0xffffff;
+		
+		while ( it.hasNext () && i++ < stopOnNthVertex ) {
 			p = it.next ();
 			graphics.lineTo ( p.x, p.y );
+			
+			//graphics.drawCircle ( p.x, p.y, 2 );
 		}
 		
-		graphics.lineTo ( pFirst.x, pFirst.y );
 		graphics.endFill ();
 	}
 	
-	public function drawOutPolys ( graphics:Graphics ):Void {
+	public function drawOutPolys ( graphics:Graphics, stopOnNthVertex:Null <Int> = null ):Void {
 		for ( poly in outPolys ) {
-			drawPoly ( poly, graphics, null, 1, 2, null, 0.5 );
+			drawPoly ( poly, graphics, null, 1, 2, null, 0.5, stopOnNthVertex );
 		}
 	}
 }
