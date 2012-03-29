@@ -21,6 +21,27 @@ class Main {
 		stage.scaleMode = StageScaleMode.NO_SCALE;
 		stage.align = StageAlign.TOP_LEFT;
 		
+		/* // Test swaps
+		var n0 = new DoublyList <Int> ( 1 );
+		n0.insertNext ( 2 );
+		n0.next.insertNext ( 3 );
+		
+		var a = n0;
+		var b = n0.next;
+		DoublyList.swap ( b, a );
+		
+		var n = b;
+		var str = "";
+		
+		while ( n != null ) {
+			str += n.value + " ";
+			n = n.next;
+		}
+		
+		trace ( str );
+		
+		return;*/
+		
 		/*var v0 = new DoublyList <Point> ( new Point ( 10, 14 ) );
 		var v1 = new DoublyList <Point> ( new Point ( 1988, 1 ), v0 );
 		v0.next = v1;
@@ -65,15 +86,24 @@ class Main {
 		lm0.insert ( lm4 );*/
 		
 		
-		var subject = [
+		/*var subject = [
 			new Point ( 0, 50 ),
 			new Point ( 50, 100 ),
-			new Point ( 100, 50 ),
+			new Point ( 150, 75 ),
 			new Point ( 50, 0 )
 		];
 		
 		//subject.push ( subject.shift () );
-		//subject.push ( subject.shift () );
+		//subject.push ( subject.shift () );*/
+		
+		var subject = [
+			new Point ( 0, 50 ),
+			new Point ( 30, 100 ),
+			new Point ( 40, 75 ),
+			new Point ( 50, 100 ),
+			new Point ( 150, 75 ),
+			new Point ( 50, 0 )
+		];
 		
 		/*var subject = [
 			new Point ( 0, 50 ),
@@ -128,5 +158,9 @@ class Main {
 		
 		clipper.drawLml ( debugSprite.graphics );
 		clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );
+		
+		VattiClipper.drawPoly ( subject, debugSprite.graphics );
+		VattiClipper.drawPoly ( clip, debugSprite.graphics );
+		clipper.drawOutPolys ( debugSprite.graphics );
 	}
 }

@@ -17,9 +17,15 @@ class ChainedPolygon {
 	
 	public inline function appendPoint ( p:Point ):Void {
 		last.insertNext ( p );
+		last = last.next;
 	}
 	
 	public inline function prependPoint ( p:Point ):Void {
 		first.insertPrev ( p );
+		first = first.prev;
+	}
+	
+	public function iterator ():Iterator <Point> {
+		return	first.iterator ();
 	}
 }

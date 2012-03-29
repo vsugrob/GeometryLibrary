@@ -166,9 +166,56 @@ class DoublyList <TElement> {
 	}
 	
 	/**
-	 * Swap positions of two elements. Note that elements not necessarily belongs to the same list.
+	 * Generalized swap routine that swaps positions of two elements in a list.
+	 * Note that elements not necessarily belongs to the same list.
 	 */
 	public static inline function swap <TElement> ( a:DoublyList <TElement>, b:DoublyList <TElement> ):Void {
+		// Assume that commented out conditions also evaluates to true i.e. list is not broken
+		if ( a.next == b /*&& b.prev == a*/ )
+			swapAdjacent ( a, b );
+		else if ( b.next == a /*&& a.prev == b*/ )
+			swapAdjacent ( b, a );
+		else
+			swapNonAdjacent ( a, b );
+	}
+	
+	/**
+	 * Swap nodes a and b given that b follows a in list.
+	 * This procedure performs faster than swapNonAdjacent () and generalized swap ().
+	 * @param	a	A node which next property points to node b.
+	 * @param	b	A node which prev property points to node a.
+	 */
+	public static inline function swapAdjacent <TElement> ( a:DoublyList <TElement>, b:DoublyList <TElement> ):Void {
+		if ( a.prev != null )
+			a.prev.next = b;
+		
+		if ( b.next != null )
+			b.next.prev = a;
+		
+		b.prev = a.prev;
+		a.next = b.next;
+		b.next = a;
+		a.prev = b;
+	}
+	
+	/**
+	 * Swap nodes a and b given that there are some other nodes between them.
+	 * @param	a	First node.
+	 * @param	b	Second node.
+	 */
+	public static inline function swapNonAdjacent <TElement> ( a:DoublyList <TElement>, b:DoublyList <TElement> ):Void {
+		if ( a.prev != null )
+			a.prev.next = b;
+		
+		if ( a.next != null )
+			a.next.prev = b;
+		
+		if ( b.prev != null )
+			b.prev.next = a;
+		
+		if ( b.next != null )
+			b.next.prev = a;
+		
 		var tmp = a.next;
 		a.next = b.next;
 		b.next = tmp;

@@ -52,7 +52,7 @@ class VattiClipper {
 		do {
 			addNewBoundPairs ( yb );	// Modifies ael
 			
-			var yt = popScanbeam ();	// Top of current scan beam
+			var yt = popScanbeam ();	// Top of the current scan beam
 			
 			processIntersections ( yb, yt );
 			processEdgesInAel ( yb, yt );
@@ -294,7 +294,7 @@ class VattiClipper {
 		initEdgeContributingStatus ( aelNode1 );
 		initEdgeContributingStatus ( aelNode2 );
 		
-		if ( edge1.contributing && edge1.contributing )
+		if ( edge1.contributing && edge2.contributing )
 			addLocalMax ( edge1, edge2, p );
 	}
 	
@@ -403,10 +403,7 @@ class VattiClipper {
 					
 					aelNode = nextAelNode;
 					
-					if ( aelNode == null )
-						break;
-					else
-						continue;
+					continue;
 				} else if ( edge.side == Side.Left ) {		// Left intermediate
 					if ( edge.contributing )
 						addLeft ( edge, new Point ( edge.successor.bottomX, yt ) );
@@ -473,6 +470,7 @@ class VattiClipper {
 			
 			e1.poly.first.prev = f1.poly.last;
 			f1.poly.last.next = e1.poly.first;
+			e1.poly.first = f1.poly.first;
 			
 			var aelNode = ael;
 			
@@ -497,6 +495,7 @@ class VattiClipper {
 			
 			e1.poly.last.next = f1.poly.first;
 			f1.poly.first.prev = e1.poly.last;
+			f1.poly.first = e1.poly.first;
 			
 			var aelNode = ael;
 			
@@ -518,12 +517,13 @@ class VattiClipper {
 		if ( ael == null )
 			return;
 		
-		buildIntersectionList ( yt - yb );
+		buildIntersectionList ( yb, yt );
 		processIntersectionList ();
 	}
 	
-	private function buildIntersectionList ( dy:Float ):Void {
+	private function buildIntersectionList ( yb:Float, yt:Float ):Void {
 		il = null; // Initialize IL to empty;
+		var dy = yt - yb;
 		
 		// Set Sorted Edge List to first node in Active Edge List
 		var selLeft = new DoublyList <DoublyList <Edge>> ( ael );
@@ -542,8 +542,8 @@ class VattiClipper {
 			
 			// TODO: cache top x-es.
 			while ( e2Node != null && topX1 < topX ( e2Node.value.value, dy ) ) {
-				var p = intersectionOf ( e1, e2Node.value.value );
-				addIntersection ( e1Node, e2Node.value, p );
+				var p = intersectionOf ( e1, e2Node.value.value, yb );
+				addIntersection ( e2Node.value, e1Node, p );	// e2 is to the left of the e1 in the ael
 				
 				// Update e2 to denote edge to its left in SEL
 				e2Node = e2Node.prev;
@@ -562,6 +562,8 @@ class VattiClipper {
 				selLeft.insertPrev ( e1Node );
 				selLeft = selLeft.prev;
 			}
+			
+			e1Node = e1Node.next;
 		}
 	}
 	
@@ -584,9 +586,10 @@ class VattiClipper {
 	 * unpredicted behavior in case when edges are parallel to each other.
 	 * @param	e1	First edge known to intersect other edge.
 	 * @param	e2	Second edge.
+	 * @param	yb	Bottom of the scanbeam.
 	 * @return	Point of intersection between two edges.
 	 */
-	private static inline function intersectionOf ( e1:Edge, e2:Edge ):Point {
+	private static inline function intersectionOf ( e1:Edge, e2:Edge, yb:Float ):Point {
 		/* ix, iy		- isec point
 		 * bx1, bx2		- bottom x-es of the edges
 		 * idy			- is eq to: iy minus bottom of the scanbeam
@@ -601,7 +604,7 @@ class VattiClipper {
 		 *	ix == bx1 + dx1 * idy */
 		
 		var idy = ( e1.bottomX - e2.bottomX ) / ( e2.dx - e1.dx );
-		var p = new Point ( topX ( e1, idy ), e1.topY - idy );
+		var p = new Point ( topX ( e1, idy ), yb + idy );
 		
 		return	p;
 	}
@@ -609,15 +612,12 @@ class VattiClipper {
 	private function processIntersectionList ():Void {
 		var isec = il;
 		
-		do {
-			/* Quote from VattiClip.pdf: "e1 precedes e2 in AEL and p is point of intersection".
-			 * TODO: check whether their order really matters?
-			 * UPD: yes, it is. It's important for further classification like LS ∩ RC etc.
-			 *  But where should we order edges, here or in buildIntersectionList ()?*/
+		while ( isec != null ) {
+			// e1 precedes e2 in AEL
 			var e1 = isec.e1Node.value;
 			var e2 = isec.e2Node.value;
 			
-			if ( e1.poly == e2.poly ) {	// like edge intersection
+			if ( e1.poly == e2.poly && e1.poly != null ) {	// like edge intersection
 				if ( e1.contributing ) {
 					addLeft ( e1, isec.p );
 					addRight ( e2, isec.p );
@@ -658,13 +658,22 @@ class VattiClipper {
 			// Swap e1 and e2 position in AEL
 			DoublyList.swap ( isec.e1Node, isec.e2Node );
 			
+			if ( isec.e1Node.prev == null )
+				ael = isec.e1Node;
+			else if ( isec.e2Node.prev == null )
+				ael = isec.e2Node;
+			
 			// Exchange adjPolyPtr pointers in edges
 			var tmpPoly = e1.poly;
 			e1.poly = e2.poly;
 			e2.poly = tmpPoly;
 			
+			var tmpContrib = e1.contributing;
+			e1.contributing = e2.contributing;
+			e2.contributing = tmpContrib;
+			
 			isec = isec.next;
-		} while ( isec != null );
+		}
 	}
 	
 	private static function getRandomColor ():UInt {
@@ -724,5 +733,42 @@ class VattiClipper {
 		}
 		
 		trace ( "there are " + num + " scanbeams" );
+	}
+	
+	public static function drawPoly ( pts:Iterable <Point>, graphics:Graphics,
+		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
+		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
+	{
+		if ( stroke == null )
+			stroke = getRandomColor ();
+		
+		if ( fill == null )
+			fill = getRandomColor ();
+		
+		var it = pts.iterator ();
+		
+		if ( !it.hasNext () )
+			return;
+		
+		graphics.lineStyle ( strokeWidth, stroke, strokeOpacity );
+		var p = it.next ();
+		var pFirst = p;
+		
+		graphics.beginFill ( fill, fillOpacity );
+		graphics.moveTo ( p.x, p.y );
+		
+		while ( it.hasNext () ) {
+			p = it.next ();
+			graphics.lineTo ( p.x, p.y );
+		}
+		
+		graphics.lineTo ( pFirst.x, pFirst.y );
+		graphics.endFill ();
+	}
+	
+	public function drawOutPolys ( graphics:Graphics ):Void {
+		for ( poly in outPolys ) {
+			drawPoly ( poly, graphics, null, 1, 2, null, 0.5 );
+		}
 	}
 }
