@@ -37,13 +37,27 @@ class VattiClipper {
 	}
 	
 	/**
-	 * @param	subject	Iterable of Point where last point coincide to first point.
-	 * @param	clip	Iterable of Point where last point coincide to first point.
+	 * 
+	 * @param	poly	Iterable of Point where last point coincide to first point.
+	 * @param	kind	Whether this poly is one that will be clipped (PolyKind.Subject) or that which
+	 * will clip (PolyKind.Clip).
 	 */
-	public function clip ( subject:Iterable <Point>, clip:Iterable <Point> ):Void {
-		initLmlAndSbl ( subject, PolyKind.Subject );
-		initLmlAndSbl ( clip, PolyKind.Clip );
-		
+	public function addPolygon ( poly:Iterable <Point>, kind:PolyKind ):Void {
+		initLmlAndSbl ( poly, kind );
+	}
+	
+	/**
+	 * Clears added polygons and all data that was accumulated during last clip operation.
+	 */
+	public function clear ():Void {
+		lml = null;
+		sbl = null;
+		ael = null;
+		outPolys = new List <ChainedPolygon> ();
+		il = null;
+	}
+	
+	public function clip ():Void {
 		if ( sbl == null )	// Scanbeam list is empty
 			return;
 		
