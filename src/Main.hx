@@ -54,8 +54,8 @@ class Main {
 		
 		var subject = [
 			new Point ( 0, 100 ),
-			new Point ( 100, 200 ),
-			new Point ( 200, 100 ),
+			new Point ( 100, 250 ),
+			new Point ( 200, 200 ),
 			new Point ( 100, 0 )
 		];
 		
@@ -63,7 +63,7 @@ class Main {
 			new Point ( 100, 300 ),
 			new Point ( 200, 290 ),
 			new Point ( 100, 100 ),
-			new Point ( 200, 110 ),
+			new Point ( 200, 200 ),
 		];
 		
 		subject.push ( subject [0] );
