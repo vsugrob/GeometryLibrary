@@ -3,8 +3,12 @@ package ;
 import flash.display.Sprite;
 import flash.display.StageAlign;
 import flash.display.StageScaleMode;
+import flash.events.Event;
+import flash.events.KeyboardEvent;
 import flash.geom.Point;
 import flash.Lib;
+import geom.ChainedPolygon;
+import geom.clipper.ClipperState;
 import geom.clipper.LocalMaxima;
 import geom.clipper.PolyKind;
 import geom.clipper.Side;
@@ -17,10 +21,16 @@ import geom.DoublyList;
  */
 
 class Main {
+	static var clipper:VattiClipper;
+	static var debugSprite:Sprite;
+	static var inputPolys:List <InputPolygon>;
+	
 	static function main () {
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
 		stage.align = StageAlign.TOP_LEFT;
+		
+		inputPolys = new List <InputPolygon> ();
 		
 		/*var subject = [
 			new Point ( 0, 50 ),
@@ -73,28 +83,67 @@ class Main {
 			new Point ( 100, 200 )
 		];
 		
-		subject.push ( subject [0] );
-		clip.push ( clip [0] );
-		clip2.push ( clip2 [0] );
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip2, PolyKind.Clip );
 		
-		var debugSprite = new Sprite ();
-		debugSprite.x = 50;
-		debugSprite.y = 50;
+		debugSprite = new Sprite ();
+		debugSprite.x = 400;
+		debugSprite.y = 25;
 		stage.addChild ( debugSprite );
 		
-		var clipper = new VattiClipper ();
-		clipper.addPolygon ( subject, PolyKind.Subject );
-		clipper.addPolygon ( clip, PolyKind.Clip );
-		//clipper.addPolygon ( clip2, PolyKind.Clip );
+		clipper = new VattiClipper ();
+		
+		for ( inputPoly in inputPolys ) {
+			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+		}
 		
 		//clipper.drawLml ( debugSprite.graphics );
 		//clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );
 		
-		clipper.clip ();
+		//clipper.clip ();
+		//while ( clipper.clipStep () ) {}
 		
-		VattiClipper.drawPoly ( subject, debugSprite.graphics, 0x777777, 0.7, 1, 0xffdd77, 0.5 );
-		VattiClipper.drawPoly ( clip, debugSprite.graphics, 0x777777, 0.7, 1, 0x77ddff, 0.5 );
-		//VattiClipper.drawPoly ( clip2, debugSprite.graphics, 0x777777, 0.7, 1, 0x77ddff, 0.5 );
-		clipper.drawOutPolys ( debugSprite.graphics );
+		//clipper.drawOutPolys ( debugSprite.graphics );
+		drawCurrentStep ();
+		
+		var stepNum = 0;
+		
+		// Setup stage for clipStep
+		stage.addEventListener ( KeyboardEvent.KEY_DOWN, function ( kb:KeyboardEvent ) {
+			if ( kb.keyCode == 32 ) {	// Space
+				if ( clipper.clipStep () )
+					stepNum++;
+				
+				drawCurrentStep ();
+				
+				if ( clipper.clipperState == ClipperState.Finished )
+					clipper.drawOutPolys ( debugSprite.graphics );
+				
+				trace ( "clipStep () #" + stepNum + ", next action: " + clipper.clipperState );
+			} else if ( kb.keyCode == 49 ) {	// 1
+				clipper.drawAelSide ( debugSprite.graphics );
+			}
+		} );
+	}
+	
+	private static function addInputPolygon ( pts:Array <Point>, kind:PolyKind ):Void {
+		pts.push ( pts [0] );
+		inputPolys.add ( new InputPolygon ( pts, kind ) );
+	}
+	
+	private static function drawCurrentStep ():Void {
+		debugSprite.graphics.clear ();
+		
+		for ( inputPoly in inputPolys ) {
+			var color = inputPoly.kind == PolyKind.Subject ? 0xffdd77 : 0x77ddff;
+			VattiClipper.drawPoly ( inputPoly.pts, debugSprite.graphics, 0x777777, 0.7, 1, color, 0.5 );
+		}
+		
+		clipper.drawCurrentScanbeam ( debugSprite.graphics );
+		
+		clipper.drawContributedPolys ( debugSprite.graphics, 0, 0.5, 2, 0xaa7700, 0.5 );
+		clipper.drawAelSide ( debugSprite.graphics );
+		clipper.drawIntersections ( debugSprite.graphics );
 	}
 }

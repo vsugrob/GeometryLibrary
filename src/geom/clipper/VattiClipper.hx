@@ -34,6 +34,7 @@ class VattiClipper {
 	
 	public function new () {
 		this.outPolys = new List <ChainedPolygon> ();
+		this.clipperState = ClipperState.NotStarted; // DEBUG
 	}
 	
 	/**
@@ -74,6 +75,56 @@ class VattiClipper {
 			yb = yt;
 		} while ( sbl != null );
 	}
+	
+	// <clipStep>
+	public var clipperState:ClipperState;
+	public var cs_yb:Null <Float>;
+	public var cs_yt:Null <Float>;
+	
+	public function clipStep ():Bool {
+		if ( clipperState == ClipperState.Finished )
+			return	false;
+		
+		/*if ( sbl == null )	// Scanbeam list is empty
+			return	false;*/
+		
+		if ( clipperState == ClipperState.NotStarted ) {
+			cs_yb = popScanbeam ();	// Bottom of current scanbeam
+			
+			clipperState = ClipperState.AddNewBoundPairs;
+			
+			return	true;
+		}
+		
+		if ( clipperState == ClipperState.AddNewBoundPairs ) {
+			addNewBoundPairs ( cs_yb );	// Modifies ael
+			cs_yt = popScanbeam ();	// Top of the current scan beam
+			
+			clipperState = ClipperState.ProcessIntersections;
+			
+			return	true;
+		}
+		
+		if ( clipperState == ClipperState.ProcessIntersections ) {
+			processIntersections ( cs_yb, cs_yt );
+			clipperState = ClipperState.ProcessEdgesInAel;
+			
+			return	true;
+		}
+		
+		if ( clipperState == ClipperState.ProcessEdgesInAel ) {
+			processEdgesInAel ( cs_yb, cs_yt );
+			
+			cs_yb = cs_yt;
+			cs_yt = null;
+			clipperState = sbl != null ? ClipperState.AddNewBoundPairs : ClipperState.Finished;
+			
+			return	sbl != null;
+		}
+		
+		return	sbl != null;
+	}
+	// </clipStep>
 	
 	private function initLmlAndSbl ( pts:Iterable <Point>, polyKind:PolyKind ):Void {
 		var it:Iterator <Point> = pts.iterator ();
@@ -650,6 +701,10 @@ class VattiClipper {
 						  e2.side == Side.Right && e2.kind == PolyKind.Subject ) )	// (LS ∩ RC) or (LC ∩ RS) → MX
 			{
 				addLocalMin ( e1, e2, isec.p );
+				e1.contributing = false;
+				e2.contributing = false;
+				e1.poly = null;
+				e2.poly = null;
 			} else if ( ( e1.side == Side.Left && e1.kind == PolyKind.Clip &&
 						  e2.side == Side.Left && e2.kind == PolyKind.Subject ) ||
 						( e1.side == Side.Left && e1.kind == PolyKind.Subject &&
@@ -792,6 +847,95 @@ class VattiClipper {
 	public function drawOutPolys ( graphics:Graphics, stopOnNthVertex:Null <Int> = null ):Void {
 		for ( poly in outPolys ) {
 			drawPoly ( poly, graphics, null, 1, 2, null, 0.5, stopOnNthVertex );
+		}
+	}
+	
+	/* We can draw ael with color legend illustrating its:
+	 * 1. Contributing status
+	 * 2. 'poly' field
+	 * 3. 'kind' field (clip/subject)
+	 * 4. 'side' field (left/right)
+	 * 5. Position in ael*/
+	public function drawAelSide ( graphics:Graphics ):Void {
+		if ( cs_yb == null || cs_yt == null )
+			return;
+		
+		var dy = cs_yt - cs_yb;
+		var aelNode = ael;
+		
+		while ( aelNode != null ) {
+			var e = aelNode.value;
+			var topX = e.bottomX + e.dx * dy;
+			
+			var color = e.side == Side.Left ? 0xff0000 : 0x00ff00;
+			graphics.lineStyle ( 1, color, 1 );
+			graphics.moveTo ( e.bottomX, cs_yb );
+			graphics.lineTo ( topX, cs_yt );
+			
+			aelNode = aelNode.next;
+		}
+	}
+	
+	public function drawContributedPolys ( graphics:Graphics,
+		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
+		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
+	{
+		var polys = new List <ChainedPolygon> ();
+		var aelNode = ael;
+		
+		while ( aelNode != null ) {
+			var e = aelNode.value;
+			
+			if ( e.poly != null ) {
+				if ( !Lambda.has ( polys, e.poly ) )
+					polys.add ( e.poly );
+			}
+			
+			aelNode = aelNode.next;
+		}
+		
+		for ( poly in outPolys ) {
+			if ( !Lambda.has ( polys, poly ) )
+				polys.add ( poly );
+		}
+		
+		for ( poly in polys ) {
+			drawPoly ( poly, graphics, stroke, strokeOpacity, strokeWidth,
+				fill, fillOpacity );
+		}
+	}
+	
+	public function drawCurrentScanbeam ( graphics:Graphics ):Void {
+		if ( cs_yb != null ) {
+			graphics.lineStyle ( 1, 0xaa9900, 1 );
+			graphics.moveTo ( -10000, cs_yb );
+			graphics.lineTo ( 10000, cs_yb );
+		}
+		
+		if ( cs_yt != null ) {
+			graphics.lineStyle ( 1, 0x99aa00, 1 );
+			graphics.moveTo ( -10000, cs_yt );
+			graphics.lineTo ( 10000, cs_yt );
+		}
+		
+		if ( cs_yb != null && cs_yt != null ) {
+			graphics.lineStyle ( 0, 0, 0 );
+			graphics.beginFill ( 0x9957aa, 0.3 );
+			graphics.drawRect ( -10000, cs_yb, 20000, cs_yt - cs_yb );
+			graphics.endFill ();
+		}
+	}
+	
+	public function drawIntersections ( graphics:Graphics ):Void {
+		var isec = il;
+		graphics.lineStyle ( 0, 0, 0 );
+		
+		while ( isec != null ) {
+			graphics.beginFill ( 0x0000ff, 0.7 );
+			graphics.drawCircle ( isec.p.x, isec.p.y, 2 );
+			graphics.endFill ();
+			
+			isec = isec.next;
 		}
 	}
 }
