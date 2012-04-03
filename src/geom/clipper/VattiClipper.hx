@@ -156,8 +156,11 @@ class VattiClipper {
 		// e1 precedes e2 in AEL
 		var e1 = isec.e1Node.value;
 		var e2 = isec.e2Node.value;
+		var msg:String = "    ";
+		msg += e1.side + " " + e1.kind + " x " + e2.side + " " + e2.kind + "\n";
 		
 		if ( e1.kind == e2.kind ) {
+			msg += "Like edge intersection";
 			/* Like edge intersection:
 			 * (LC ∩ RC) or (RC ∩ LC) → LI and RI
 			 * (LS ∩ RS) or (RS ∩ LS) → LI and RI */
@@ -165,11 +168,14 @@ class VattiClipper {
 				if ( e1.side == Side.Left ) {	// Then we assume that e2 is right
 					addLeft ( e1, isec.p );
 					addRight ( e2, isec.p );
+					msg += "\naddLeft ( e1, isec.p );\naddRight ( e2, isec.p );";
 				} else {						// e1 is right e2 is left
 					addLeft ( e2, isec.p );
 					addRight ( e1, isec.p );
+					msg += "\naddLeft ( e2, isec.p );\naddRight ( e1, isec.p );";
 				}
-			}
+			} else
+				msg += " non-contributing";
 			
 			// Exchange side values of edges
 			var tmpSide = e1.side;
@@ -185,18 +191,22 @@ class VattiClipper {
 			e2.contributing = false;
 			e1.poly = null;
 			e2.poly = null;
+			
+			msg += "addLocalMin ( e1, e2, isec.p );";
 		} else if ( ( e1.side == Side.Left && e1.kind == PolyKind.Clip &&
 					  e2.side == Side.Left && e2.kind == PolyKind.Subject ) ||
 					( e1.side == Side.Left && e1.kind == PolyKind.Subject &&
 					  e2.side == Side.Left && e2.kind == PolyKind.Clip ) )		// (LC ∩ LS) or (LS ∩ LC) → LI
 		{
 			addLeft ( e2, isec.p );
+			msg += "addLeft ( e2, isec.p );";
 		} else if ( ( e1.side == Side.Right && e1.kind == PolyKind.Clip &&
 					  e2.side == Side.Right && e2.kind == PolyKind.Subject ) ||
 					( e1.side == Side.Right && e1.kind == PolyKind.Subject &&
 					  e2.side == Side.Right && e2.kind == PolyKind.Clip ) )		// (RC ∩ RS) or (RS ∩ RC) → RI
 		{
 			addRight ( e1, isec.p );
+			msg += "addRight ( e1, isec.p );";
 		} else if ( ( e1.side == Side.Right && e1.kind == PolyKind.Subject &&
 					  e2.side == Side.Left  && e2.kind == PolyKind.Clip ) ||
 					( e1.side == Side.Right && e1.kind == PolyKind.Clip &&
@@ -205,6 +215,7 @@ class VattiClipper {
 			addLocalMax ( e1, e2, isec.p );
 			e1.contributing = true;
 			e2.contributing = true;
+			msg += "addLocalMax ( e1, e2, isec.p );";
 		}
 		
 		// Swap e1 and e2 position in AEL
@@ -226,6 +237,8 @@ class VattiClipper {
 		
 		isec = isec.next;
 		il = il.next;
+		
+		trace ( msg );
 		
 		return	isec != null;
 	}
@@ -1039,6 +1052,14 @@ class VattiClipper {
 	public function drawIntersections ( graphics:Graphics ):Void {
 		var isec = il;
 		graphics.lineStyle ( 0, 0, 0 );
+		
+		if ( isec != null ) {
+			graphics.beginFill ( 0x5599ff, 1 );
+			graphics.drawCircle ( isec.p.x, isec.p.y, 2 );
+			graphics.endFill ();
+			
+			isec = isec.next;
+		}
 		
 		while ( isec != null ) {
 			graphics.beginFill ( 0x0000ff, 0.7 );
