@@ -44,7 +44,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -127,5 +127,29 @@
    id="tspan3802">bottomX</tspan>. Данная мера может касаться и процедур подсчета like/unlike ребер <tspan
    style="font-style:oblique;-inkscape-font-specification:Sans Oblique"
    id="tspan3804">левее</tspan> определенного ребра.</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#262626;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="6.5927734"
+       y="389.97891"
+       id="text3774-1"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="6.5927734"
+         y="389.97891"
+         style="font-style:normal;font-weight:normal;-inkscape-font-specification:Sans"
+         id="tspan3788-5"><tspan
+   style="font-weight:bold;-inkscape-font-specification:Sans Bold"
+   id="tspan3083">UPD:</tspan> все хорошо когда локальные максимумы принадлежат одному типу полигона (subject или clip).Процессинг пересечений</tspan><tspan
+         sodipodi:role="line"
+         x="6.5927734"
+         y="404.97891"
+         style="font-style:normal;font-weight:normal;-inkscape-font-specification:Sans"
+         id="tspan3079">разрешает все проблемы с неверной пространственной сортировкой. Случай с принадлежностью ребер к разным типам</tspan><tspan
+         sodipodi:role="line"
+         x="6.5927734"
+         y="419.97891"
+         style="font-style:normal;font-weight:normal;-inkscape-font-specification:Sans"
+         id="tspan3081">полигонов пока не проверен.</tspan></text>
   </g>
 </svg>

@@ -587,19 +587,13 @@ class VattiClipper {
 					aelNode = nextAelNode;
 					
 					continue;
-				} else if ( edge.side == Side.Left ) {		// Left intermediate
-					if ( edge.contributing )
-						addLeft ( edge, new Point ( edge.successor.bottomX, yt ) );
-					
-					edge.successor.poly = edge.poly;
-					edge.successor.contributing = edge.contributing;
-					edge.successor.side = edge.side;
-					aelNode.value = edge.successor;
-					
-					addScanbeam ( edge.successor.topY );
-				} else { 									// Right intermediate
-					if ( edge.contributing )
-						addRight ( edge, new Point ( edge.successor.bottomX, yt ) );
+				} else {
+					if ( edge.contributing ) {
+						if ( edge.side == Side.Left )		// Left intermediate
+							addLeft ( edge, new Point ( edge.successor.bottomX, yt ) );
+						else 								// Right intermediate
+							addRight ( edge, new Point ( edge.successor.bottomX, yt ) );
+					}
 					
 					edge.successor.poly = edge.poly;
 					edge.successor.contributing = edge.contributing;
@@ -999,6 +993,50 @@ class VattiClipper {
 		}
 	}
 	
+	public function drawAelPoly ( graphics:Graphics ):Void {
+		if ( cs_yb == null || cs_yt == null )
+			return;
+		
+		var polys = new List <ChainedPolygon> ();
+		var aelNode = ael;
+		var e:Edge;
+		
+		while ( aelNode != null ) {
+			e = aelNode.value;
+			
+			if ( e.contributing ) {
+				if ( !Lambda.has ( polys, e.poly ) )
+					polys.add ( e.poly );
+			}
+			
+			aelNode = aelNode.next;
+		}
+		
+		var colorDelta = polys.length < 2 ? 0 : 255 / ( polys.length - 1 );
+		
+		var dy = cs_yt - cs_yb;
+		aelNode = ael;
+		
+		while ( aelNode != null ) {
+			e = aelNode.value;
+			var topX = e.bottomX + e.dx * dy;
+			
+			var color:UInt;
+			
+			if ( e.contributing ) {
+				var polyIdx = Lambda.indexOf ( polys, e.poly );
+				color = Std.int ( polyIdx * colorDelta ) << 8;
+			} else
+				color = 0x445599;
+			
+			graphics.lineStyle ( 1, color, 1 );
+			graphics.moveTo ( e.bottomX, cs_yb );
+			graphics.lineTo ( topX, cs_yt );
+			
+			aelNode = aelNode.next;
+		}
+	}
+	
 	public function drawContributedPolys ( graphics:Graphics,
 		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
 		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
@@ -1047,6 +1085,22 @@ class VattiClipper {
 			graphics.drawRect ( -10000, cs_yb, 20000, cs_yt - cs_yb );
 			graphics.endFill ();
 		}
+	}
+	
+	public function drawIntersectionScanline ( graphics:Graphics ):Void {
+		if ( il == null )
+			return;
+		
+		if ( cs_yb != null ) {
+			graphics.lineStyle ( 0, 0, 0 );
+			graphics.beginFill ( 0x0, 0.2 );
+			graphics.drawRect ( -10000, cs_yb, 20000, il.p.y - cs_yb );
+			graphics.endFill ();
+		}
+		
+		graphics.lineStyle ( 1, 0xaa9977, 1 );
+		graphics.moveTo ( -10000, il.p.y );
+		graphics.lineTo ( 10000, il.p.y );
 	}
 	
 	public function drawIntersections ( graphics:Graphics ):Void {

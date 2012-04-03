@@ -32,7 +32,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*var subject = [
+		/*// Test: poly with two contributing local maximas
+		var subject = [
 			new Point ( 0, 50 ),
 			new Point ( 30, 100 ),
 			new Point ( 40, 75 ),
@@ -46,9 +47,13 @@ class Main {
 			new Point ( 20, 90 ),
 			new Point ( 40, 130 ),
 			new Point ( 120, 40 ),
-		];*/
+		];
 		
-		/*var subject = [
+		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( subject, PolyKind.Subject );*/
+		
+		/*// Test: simple case of one self-intersection (hourglass)
+		var subject = [
 			new Point ( 10, 10 ),
 			new Point ( 0, 300 ),
 			new Point ( 300, 600 ),
@@ -61,8 +66,12 @@ class Main {
 			new Point ( 200, 290 ),
 			new Point ( 100, 100 ),
 			new Point ( 200, 110 ),
-		];*/
+		];
 		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: two clip polygons
 		var subject = [
 			new Point ( 0, 100 ),
 			new Point ( 100, 250 ),
@@ -85,7 +94,120 @@ class Main {
 		
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( clip2, PolyKind.Clip );
+		addInputPolygon ( clip2, PolyKind.Clip );*/
+		
+		/*// Test: self-intersections with even-odd rule (vatti clip classic behavior)
+		var subject = [
+			new Point ( 0, 200 ),
+			new Point ( 300, 0 ),
+			new Point ( 600, 200 ),
+			new Point ( 200, 400 ),
+			new Point ( 100, 300 ),
+			new Point ( 300, 100 ),
+			new Point ( 500, 300 ),
+			new Point ( 400, 400 ),
+		];
+		
+		var clip = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( subject, PolyKind.Subject );*/
+		
+		/*// Test: overlapping edges of the same poly
+		var subject = [
+			new Point ( 330, 500 ),
+			new Point ( 325, 450 ),
+			new Point ( 350, 400 ),
+			new Point ( 450, 300 ),
+			new Point ( 300, 250 ),
+			new Point ( 150, 300 ),
+			new Point ( 350, 400 ),
+			new Point ( 325, 450 ),
+		];
+		
+		var clip = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( subject, PolyKind.Subject );*/
+		
+		/*// Test: "wings"
+		var bgPoly = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		var leftWing = [
+			new Point ( 300, 500 ),
+			new Point ( 200, 200 ),
+			new Point ( 400, 300 ),
+		];
+		
+		var rightWing = [
+			new Point ( 300, 500 ),
+			new Point ( 600, 200 ),
+			new Point ( 400, 300 ),
+		];
+		
+		addInputPolygon ( bgPoly, PolyKind.Subject );
+		addInputPolygon ( leftWing, PolyKind.Clip );
+		addInputPolygon ( rightWing, PolyKind.Clip );*/
+		
+		/*// Test: "wings" rearranged
+		var bgPoly = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		var leftWing = [
+			new Point ( 300, 500 ),
+			new Point ( 200, 200 ),
+			new Point ( 400, 300 ),
+		];
+		
+		var rightWing = [
+			new Point ( 300, 500 ),
+			new Point ( 600, 200 ),
+			new Point ( 400, 300 ),
+		];
+		
+		addInputPolygon ( bgPoly, PolyKind.Subject );
+		addInputPolygon ( leftWing, PolyKind.Clip );
+		addInputPolygon ( rightWing, PolyKind.Subject );*/
+		
+		// Test: singly-rooted tooth
+		var bgPoly = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		var tooth = [
+			new Point ( 300, 500 ),
+			new Point ( 100, 300 ),
+			new Point ( 300, 200 ),
+			new Point ( 500, 300 ),
+			new Point ( 300, 500 ),
+			new Point ( 350, 300 ),
+			new Point ( 250, 330 ),
+		];
+		
+		addInputPolygon ( bgPoly, PolyKind.Subject );
+		addInputPolygon ( tooth, PolyKind.Clip );
 		
 		debugSprite = new Sprite ();
 		debugSprite.x = 400;
@@ -141,6 +263,7 @@ class Main {
 		}
 		
 		clipper.drawCurrentScanbeam ( debugSprite.graphics );
+		clipper.drawIntersectionScanline ( debugSprite.graphics );
 		
 		clipper.drawContributedPolys ( debugSprite.graphics, 0, 0.5, 2, 0xaa7700, 0.5 );
 		clipper.drawAelSide ( debugSprite.graphics );
