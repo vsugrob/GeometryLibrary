@@ -9,6 +9,8 @@ enum ClipperState {
 	NotStarted;
 	AddNewBoundPairs;
 	ProcessIntersections;
+	BuildIntersectionList;
+	ProcessIntersectionList;
 	ProcessEdgesInAel;
 	Finished;
 }

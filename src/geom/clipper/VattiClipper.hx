@@ -100,14 +100,16 @@ class VattiClipper {
 			addNewBoundPairs ( cs_yb );	// Modifies ael
 			cs_yt = popScanbeam ();	// Top of the current scan beam
 			
-			clipperState = ClipperState.ProcessIntersections;
+			clipperState = ClipperState.BuildIntersectionList;
 			
 			return	true;
 		}
 		
-		if ( clipperState == ClipperState.ProcessIntersections ) {
-			processIntersections ( cs_yb, cs_yt );
-			clipperState = ClipperState.ProcessEdgesInAel;
+		if ( clipperState == ClipperState.BuildIntersectionList ||
+			 clipperState == ClipperState.ProcessIntersectionList )
+		{
+			if ( !processIntersectionsStep ( cs_yb, cs_yt ) )
+				clipperState = ClipperState.ProcessEdgesInAel;
 			
 			return	true;
 		}
@@ -123,6 +125,109 @@ class VattiClipper {
 		}
 		
 		return	sbl != null;
+	}
+	
+	private function processIntersectionsStep ( yb:Float, yt:Float ):Bool {
+		if ( ael == null ) {
+			clipperState = ClipperState.ProcessEdgesInAel;
+			
+			return	false;
+		}
+		
+		if ( clipperState == ClipperState.BuildIntersectionList ) {
+			buildIntersectionList ( yb, yt );
+			clipperState = ClipperState.ProcessIntersectionList;
+			
+			return	true;
+		}
+		
+		if ( clipperState == ClipperState.ProcessIntersectionList )
+			return	processIntersectionListStep ();
+		
+		return	false;
+	}
+	
+	private function processIntersectionListStep ():Bool {
+		var isec = il;
+		
+		if ( isec == null )
+			return	false;
+		
+		// e1 precedes e2 in AEL
+		var e1 = isec.e1Node.value;
+		var e2 = isec.e2Node.value;
+		
+		if ( e1.kind == e2.kind ) {
+			/* Like edge intersection:
+			 * (LC ∩ RC) or (RC ∩ LC) → LI and RI
+			 * (LS ∩ RS) or (RS ∩ LS) → LI and RI */
+			if ( e1.contributing ) {			// Then e2 is contributing also
+				if ( e1.side == Side.Left ) {	// Then we assume that e2 is right
+					addLeft ( e1, isec.p );
+					addRight ( e2, isec.p );
+				} else {						// e1 is right e2 is left
+					addLeft ( e2, isec.p );
+					addRight ( e1, isec.p );
+				}
+			}
+			
+			// Exchange side values of edges
+			var tmpSide = e1.side;
+			e1.side = e2.side;
+			e2.side = tmpSide;
+		} else if ( ( e1.side == Side.Left  && e1.kind == PolyKind.Subject &&
+					  e2.side == Side.Right && e2.kind == PolyKind.Clip ) ||
+					( e1.side == Side.Left  && e1.kind == PolyKind.Clip &&
+					  e2.side == Side.Right && e2.kind == PolyKind.Subject ) )	// (LS ∩ RC) or (LC ∩ RS) → MX
+		{
+			addLocalMin ( e1, e2, isec.p );
+			e1.contributing = false;
+			e2.contributing = false;
+			e1.poly = null;
+			e2.poly = null;
+		} else if ( ( e1.side == Side.Left && e1.kind == PolyKind.Clip &&
+					  e2.side == Side.Left && e2.kind == PolyKind.Subject ) ||
+					( e1.side == Side.Left && e1.kind == PolyKind.Subject &&
+					  e2.side == Side.Left && e2.kind == PolyKind.Clip ) )		// (LC ∩ LS) or (LS ∩ LC) → LI
+		{
+			addLeft ( e2, isec.p );
+		} else if ( ( e1.side == Side.Right && e1.kind == PolyKind.Clip &&
+					  e2.side == Side.Right && e2.kind == PolyKind.Subject ) ||
+					( e1.side == Side.Right && e1.kind == PolyKind.Subject &&
+					  e2.side == Side.Right && e2.kind == PolyKind.Clip ) )		// (RC ∩ RS) or (RS ∩ RC) → RI
+		{
+			addRight ( e1, isec.p );
+		} else if ( ( e1.side == Side.Right && e1.kind == PolyKind.Subject &&
+					  e2.side == Side.Left  && e2.kind == PolyKind.Clip ) ||
+					( e1.side == Side.Right && e1.kind == PolyKind.Clip &&
+					  e2.side == Side.Left  && e2.kind == PolyKind.Subject ) )	// (RS ∩ LC) or (RC ∩ LS) → MN
+		{
+			addLocalMax ( e1, e2, isec.p );
+			e1.contributing = true;
+			e2.contributing = true;
+		}
+		
+		// Swap e1 and e2 position in AEL
+		DoublyList.swap ( isec.e1Node, isec.e2Node );
+		
+		if ( isec.e1Node.prev == null )
+			ael = isec.e1Node;
+		else if ( isec.e2Node.prev == null )
+			ael = isec.e2Node;
+		
+		// Exchange adjPolyPtr pointers in edges
+		var tmpPoly = e1.poly;
+		e1.poly = e2.poly;
+		e2.poly = tmpPoly;
+		
+		var tmpContrib = e1.contributing;
+		e1.contributing = e2.contributing;
+		e2.contributing = tmpContrib;
+		
+		isec = isec.next;
+		il = il.next;
+		
+		return	isec != null;
 	}
 	// </clipStep>
 	
@@ -686,9 +791,14 @@ class VattiClipper {
 				/* Like edge intersection:
 				 * (LC ∩ RC) or (RC ∩ LC) → LI and RI
 				 * (LS ∩ RS) or (RS ∩ LS) → LI and RI */
-				if ( e1.contributing ) {
-					addLeft ( e1, isec.p );
-					addRight ( e2, isec.p );
+				if ( e1.contributing ) {			// Then e2 is contributing also
+					if ( e1.side == Side.Left ) {	// Then we assume that e2 is right
+						addLeft ( e1, isec.p );
+						addRight ( e2, isec.p );
+					} else {						// e1 is right e2 is left
+						addLeft ( e2, isec.p );
+						addRight ( e1, isec.p );
+					}
 				}
 				
 				// Exchange side values of edges
