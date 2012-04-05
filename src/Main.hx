@@ -1,5 +1,8 @@
 package ;
 
+import flash.desktop.Clipboard;
+import flash.desktop.ClipboardFormats;
+import flash.display.Graphics;
 import flash.display.Sprite;
 import flash.display.StageAlign;
 import flash.display.StageScaleMode;
@@ -96,8 +99,16 @@ class Main {
 		addInputPolygon ( clip, PolyKind.Clip );
 		addInputPolygon ( clip2, PolyKind.Clip );*/
 		
+		
 		/*// Test: self-intersections with even-odd rule (vatti clip classic behavior)
 		var subject = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		var clip = [
 			new Point ( 0, 200 ),
 			new Point ( 300, 0 ),
 			new Point ( 600, 200 ),
@@ -108,18 +119,18 @@ class Main {
 			new Point ( 400, 400 ),
 		];
 		
-		var clip = [
+		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( subject, PolyKind.Subject );*/
+		
+		/*// Test: overlapping edges of the same poly
+		var subject = [
 			new Point ( -10, -10 ),
 			new Point ( 600, 0 ),
 			new Point ( 610, 610 ),
 			new Point ( 0, 600 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( subject, PolyKind.Subject );*/
-		
-		/*// Test: overlapping edges of the same poly
-		var subject = [
+		var clip = [
 			new Point ( 330, 500 ),
 			new Point ( 325, 450 ),
 			new Point ( 350, 400 ),
@@ -128,13 +139,6 @@ class Main {
 			new Point ( 150, 300 ),
 			new Point ( 350, 400 ),
 			new Point ( 325, 450 ),
-		];
-		
-		var clip = [
-			new Point ( -10, -10 ),
-			new Point ( 600, 0 ),
-			new Point ( 610, 610 ),
-			new Point ( 0, 600 ),
 		];
 		
 		addInputPolygon ( clip, PolyKind.Clip );
@@ -188,7 +192,7 @@ class Main {
 		addInputPolygon ( leftWing, PolyKind.Clip );
 		addInputPolygon ( rightWing, PolyKind.Subject );*/
 		
-		// Test: singly-rooted tooth
+		/*// Test: singly-rooted tooth
 		var bgPoly = [
 			new Point ( -10, -10 ),
 			new Point ( 600, 0 ),
@@ -207,7 +211,53 @@ class Main {
 		];
 		
 		addInputPolygon ( bgPoly, PolyKind.Subject );
-		addInputPolygon ( tooth, PolyKind.Clip );
+		addInputPolygon ( tooth, PolyKind.Clip );*/
+		
+		/*// Test: many-rooted tooth
+		var bgPoly = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		var tooth = [
+			new Point ( 50, 200 ),
+			new Point ( 300, 500 ),
+			new Point ( 150, 200 ),
+			new Point ( 175, 210 ),
+			new Point ( 300, 500 ),
+			new Point ( 200, 190 ),
+			new Point ( 250, 230 ),
+			new Point ( 300, 500 ),
+			new Point ( 290, 240 ),
+			new Point ( 320, 280 ),
+			new Point ( 300, 500 ),
+			
+			new Point ( 600, 200 ),
+			new Point ( 250, 50 ),
+		];
+		
+		addInputPolygon ( bgPoly, PolyKind.Subject );
+		addInputPolygon ( tooth, PolyKind.Clip );*/
+		
+		// Test: coincident polys, "diamond"
+		var subject = [
+			new Point ( 100, 0 ),
+			new Point ( 200, 100 ),
+			new Point ( 100, 300 ),
+			new Point ( 0, 100 ),
+		];
+		
+		var clip = [
+			new Point ( 100, 0 ),
+			new Point ( 150, 100 ),
+			new Point ( 100, 300 ),
+			new Point ( 50, 100 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );
 		
 		debugSprite = new Sprite ();
 		debugSprite.x = 400;
@@ -243,8 +293,14 @@ class Main {
 					clipper.drawOutPolys ( debugSprite.graphics );
 				
 				trace ( "clipStep () #" + stepNum + ", next action: " + clipper.clipperState );
-			} else if ( kb.keyCode == 49 ) {	// 1
-				clipper.drawAelSide ( debugSprite.graphics );
+			} else if ( kb.keyCode == 49 )	// 1
+				clipper.drawAelBySide ( debugSprite.graphics );
+			else if ( kb.keyCode == 50 )	// 2
+				clipper.drawAelByPoly ( debugSprite.graphics );
+			else if ( kb.keyCode == 83 ) {	// s
+				var buf = new StringBuf ();
+				drawInputPolysSvg ( buf );
+				Clipboard.generalClipboard.setData ( ClipboardFormats.TEXT_FORMAT, buf.toString () );
 			}
 		} );
 	}
@@ -256,17 +312,67 @@ class Main {
 	
 	private static function drawCurrentStep ():Void {
 		debugSprite.graphics.clear ();
-		
-		for ( inputPoly in inputPolys ) {
-			var color = inputPoly.kind == PolyKind.Subject ? 0xffdd77 : 0x77ddff;
-			VattiClipper.drawPoly ( inputPoly.pts, debugSprite.graphics, 0x777777, 0.7, 1, color, 0.5 );
-		}
+		drawInputPolys ( debugSprite.graphics );
 		
 		clipper.drawCurrentScanbeam ( debugSprite.graphics );
 		clipper.drawIntersectionScanline ( debugSprite.graphics );
 		
 		clipper.drawContributedPolys ( debugSprite.graphics, 0, 0.5, 2, 0xaa7700, 0.5 );
-		clipper.drawAelSide ( debugSprite.graphics );
+		clipper.drawAelBySide ( debugSprite.graphics );
 		clipper.drawIntersections ( debugSprite.graphics );
+	}
+	
+	private static function drawInputPolys ( graphics:Graphics ):Void {
+		var subjPolys = new List <InputPolygon> ();
+		var clipPolys = new List <InputPolygon> ();
+		
+		for ( inputPoly in inputPolys ) {
+			if ( inputPoly.kind == PolyKind.Subject )
+				subjPolys.add ( inputPoly );
+			else
+				clipPolys.add ( inputPoly );
+		}
+		
+		VattiClipper.beginDrawPoly ( graphics, 0x777777, 0.7, 1, 0xffdd77, 0.5 );
+		
+		for ( inputPoly in subjPolys )
+			VattiClipper.drawPoly ( inputPoly.pts, graphics );
+		
+		VattiClipper.endDrawPoly ( graphics );
+		
+		VattiClipper.beginDrawPoly ( graphics, 0x777777, 0.7, 1, 0x77ddff, 0.5 );
+		
+		for ( inputPoly in clipPolys )
+			VattiClipper.drawPoly ( inputPoly.pts, graphics );
+		
+		VattiClipper.endDrawPoly ( graphics );
+	}
+	
+	private static function drawInputPolysSvg ( buf:StringBuf ):Void {
+		var subjPolys = new List <InputPolygon> ();
+		var clipPolys = new List <InputPolygon> ();
+		
+		for ( inputPoly in inputPolys ) {
+			if ( inputPoly.kind == PolyKind.Subject )
+				subjPolys.add ( inputPoly );
+			else
+				clipPolys.add ( inputPoly );
+		}
+		
+		buf.add ( '<g>\n' );
+		VattiClipper.beginDrawPolySvg ( buf, 0x777777, 0.7, 1, 0xffdd77, 0.5 );
+		
+		for ( inputPoly in subjPolys )
+			VattiClipper.drawPolySvg ( inputPoly.pts, buf );
+		
+		VattiClipper.endDrawPolySvg ( buf );
+		
+		VattiClipper.beginDrawPolySvg ( buf, 0x777777, 0.7, 1, 0x77ddff, 0.5 );
+		
+		for ( inputPoly in clipPolys )
+			VattiClipper.drawPolySvg ( inputPoly.pts, buf );
+		
+		VattiClipper.endDrawPolySvg ( buf );
+		buf.add ( '</g>\n' );
 	}
 }

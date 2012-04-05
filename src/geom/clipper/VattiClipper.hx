@@ -924,9 +924,9 @@ class VattiClipper {
 		trace ( "there are " + num + " scanbeams" );
 	}
 	
-	public static function drawPoly ( pts:Iterable <Point>, graphics:Graphics,
+	public static function beginDrawPoly ( graphics:Graphics,
 		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
-		fill:Null <UInt> = null, fillOpacity = 0.5, stopOnNthVertex:Null <Int> = null ):Void
+		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
 	{
 		if ( stroke == null )
 			stroke = getRandomColor ();
@@ -934,36 +934,74 @@ class VattiClipper {
 		if ( fill == null )
 			fill = getRandomColor ();
 		
+		graphics.lineStyle ( strokeWidth, stroke, strokeOpacity );
+		graphics.beginFill ( fill, fillOpacity );
+	}
+	
+	public static function endDrawPoly ( graphics:Graphics ):Void {
+		graphics.endFill ();
+	}
+	
+	public static function drawPoly ( pts:Iterable <Point>, graphics:Graphics ):Void {
 		var it = pts.iterator ();
 		
 		if ( !it.hasNext () )
 			return;
 		
-		graphics.lineStyle ( strokeWidth, stroke, strokeOpacity );
 		var p = it.next ();
-		var pFirst = p;
-		
-		graphics.beginFill ( fill, fillOpacity );
 		graphics.moveTo ( p.x, p.y );
 		
-		var i = 0;
-		
-		if ( stopOnNthVertex == null )
-			stopOnNthVertex = 0xffffff;
-		
-		while ( it.hasNext () && i++ < stopOnNthVertex ) {
+		while ( it.hasNext () ) {
 			p = it.next ();
 			graphics.lineTo ( p.x, p.y );
 			
 			//graphics.drawCircle ( p.x, p.y, 2 );
 		}
-		
-		graphics.endFill ();
 	}
 	
-	public function drawOutPolys ( graphics:Graphics, stopOnNthVertex:Null <Int> = null ):Void {
+	public static function beginDrawPolySvg ( buf:StringBuf,
+		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
+		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
+	{
+		if ( stroke == null )
+			stroke = getRandomColor ();
+		
+		if ( fill == null )
+			fill = getRandomColor ();
+		
+		buf.add ( '<path stroke="#' + StringTools.hex ( stroke, 6 ) +
+			'" stroke-width="' + strokeWidth + '" stroke-opacity="' + strokeOpacity + '"' );
+		
+		buf.add ( ' fill="#' + StringTools.hex ( fill, 6 ) +
+			'" fill-opacity="' + fillOpacity + '"' );
+		
+		buf.add ( ' d="' );
+	}
+	
+	public static function drawPolySvg ( pts:Iterable <Point>, buf:StringBuf ):Void {
+		var it = pts.iterator ();
+		
+		if ( !it.hasNext () )
+			return;
+		
+		var p = it.next ();
+		buf.add ( 'M' + p.x + ',' + p.y + ' ' );
+		
+		while ( it.hasNext () ) {
+			p = it.next ();
+			buf.add ( p.x + ',' + p.y + ' ' );
+		}
+	}
+	
+	public static function endDrawPolySvg ( buf:StringBuf ):Void {
+		buf.add ( '" />\n' );
+	}
+	
+	public function drawOutPolys ( graphics:Graphics ):Void {
 		for ( poly in outPolys ) {
-			drawPoly ( poly, graphics, null, 1, 2, null, 0.5, stopOnNthVertex );
+			beginDrawPoly ( graphics, null, 1, 2, null, 0.5 );
+			drawPoly ( poly, graphics );
+			endDrawPoly ( graphics );
 		}
 	}
 	
@@ -973,7 +1011,7 @@ class VattiClipper {
 	 * 3. 'kind' field (clip/subject)
 	 * 4. 'side' field (left/right)
 	 * 5. Position in ael*/
-	public function drawAelSide ( graphics:Graphics ):Void {
+	public function drawAelBySide ( graphics:Graphics ):Void {
 		if ( cs_yb == null || cs_yt == null )
 			return;
 		
@@ -993,7 +1031,7 @@ class VattiClipper {
 		}
 	}
 	
-	public function drawAelPoly ( graphics:Graphics ):Void {
+	public function drawAelByPoly ( graphics:Graphics ):Void {
 		if ( cs_yb == null || cs_yt == null )
 			return;
 		
@@ -1061,8 +1099,10 @@ class VattiClipper {
 		}
 		
 		for ( poly in polys ) {
-			drawPoly ( poly, graphics, stroke, strokeOpacity, strokeWidth,
+			beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth,
 				fill, fillOpacity );
+			drawPoly ( poly, graphics );
+			endDrawPoly ( graphics );
 		}
 	}
 	
