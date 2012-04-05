@@ -572,14 +572,19 @@ class VattiClipper {
 			
 			if ( edge.topY == yt ) {	// Edge terminates at the top of the scanbeam
 				if ( edge.successor == null ) {			// Local minima
-					var nextEdge = aelNode.next.value;
+					var nextAelNode:DoublyList <Edge>;
 					
-					if ( edge.contributing )
+					if ( edge.contributing ) {	// nextEdge should be also contributing
+						var nextEdge = aelNode.next.value;
 						addLocalMin ( edge, nextEdge, new Point ( topX ( edge, dy ), yt ) );
-					
-					var nextAelNode = aelNode.next.next;
-					aelNode.removeNext ();
-					aelNode.removeSelf ();
+						
+						nextAelNode = aelNode.next.next;
+						aelNode.removeNext ();
+						aelNode.removeSelf ();
+					} else {
+						nextAelNode = aelNode.next;
+						aelNode.removeSelf ();
+					}
 					
 					if ( ael == aelNode )
 						ael = nextAelNode;
@@ -654,7 +659,7 @@ class VattiClipper {
 			do {
 				var f2 = aelNode.value;
 				
-				if ( f2.poly == f1.poly ) {
+				if ( f2.poly == f1.poly && f2 != f1 ) {
 					f2.poly = e1.poly;	// Make P1 the adjacent polygon of f2
 					
 					break;
@@ -679,7 +684,7 @@ class VattiClipper {
 			do {
 				var e2 = aelNode.value;
 				
-				if ( e2.poly == e1.poly ) {
+				if ( e2.poly == e1.poly && e2 != e1 ) {
 					e2.poly = f1.poly;	// Make P2 the adjacent polygon of e2
 					
 					break;

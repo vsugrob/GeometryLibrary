@@ -241,7 +241,7 @@ class Main {
 		addInputPolygon ( bgPoly, PolyKind.Subject );
 		addInputPolygon ( tooth, PolyKind.Clip );*/
 		
-		// Test: coincident polys, "diamond"
+		/*// Test: coincident polys, "diamond"
 		var subject = [
 			new Point ( 100, 0 ),
 			new Point ( 200, 100 ),
@@ -257,7 +257,64 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: "lowered wings"
+		var bgPoly = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		var leftWing = [
+			new Point ( 300, 500 ),
+			new Point ( 200, 400 ),
+			new Point ( 400, 300 ),
+		];
+		
+		var rightWing = [
+			new Point ( 300, 500 ),
+			new Point ( 600, 400 ),
+			new Point ( 400, 300 ),
+		];
+		
+		addInputPolygon ( bgPoly, PolyKind.Subject );
+		
+		// Subtest 1: edges are not resorted at the local maxima
+		//addInputPolygon ( rightWing, PolyKind.Clip );
+		//addInputPolygon ( leftWing, PolyKind.Clip );
+		// Subtest 2: edges ARE resorted at the local maxima
+		addInputPolygon ( leftWing, PolyKind.Clip );
+		addInputPolygon ( rightWing, PolyKind.Clip );*/
+		
+		// Test: flipped many-rooted tooth
+		var bgPoly = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		var tooth = [
+			new Point ( 300, 500 ),
+			new Point ( 0, 300 ),
+			new Point ( 300, 0 ),
+			new Point ( 150, 300 ),
+			new Point ( 180, 320 ),
+			new Point ( 300, 0 ),
+			new Point ( 210, 330 ),
+			new Point ( 240, 310 ),
+			new Point ( 300, 0 ),
+			new Point ( 300, 250 ),
+			new Point ( 340, 275 ),
+			new Point ( 300, 0 ),
+			
+			new Point ( 600, 300 ),
+		];
+		
+		addInputPolygon ( bgPoly, PolyKind.Subject );
+		addInputPolygon ( tooth, PolyKind.Clip );
 		
 		debugSprite = new Sprite ();
 		debugSprite.x = 400;
