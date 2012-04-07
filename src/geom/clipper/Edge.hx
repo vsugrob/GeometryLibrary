@@ -8,9 +8,7 @@ import geom.ChainedPolygon;
 
 class Edge {
 	/**
-	 * Initially the x-coodinate of the bottom vertex, but once the
-	 * edge is on the AEL, then it is the x-intercept of the edge with
-	 * the line at the bottom of the current scanbeam.
+	 * X-coordinate of bottom vertex.
 	 */
 	public var bottomX:Float;
 	/**

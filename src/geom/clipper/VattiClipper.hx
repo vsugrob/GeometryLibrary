@@ -483,6 +483,10 @@ class VattiClipper {
 		
 		aelNode1.side = e1Side;
 		aelNode2.side = e2Side;
+		aelNode1.bottomXIntercept = aelNode1.edge.bottomX;
+		aelNode2.bottomXIntercept = aelNode2.edge.bottomX;
+		aelNode1.bottomY = yb;
+		aelNode2.bottomY = yb;
 		
 		initEdgeContributingStatus ( aelNode1 );
 		initEdgeContributingStatus ( aelNode2 );
@@ -511,7 +515,7 @@ class VattiClipper {
 		var i:Int = 0;
 		var aelNode = ael;
 		
-		while ( aelNode != null && aelNode.edge.bottomX < x ) {
+		while ( aelNode != null && aelNode.bottomXIntercept < x ) {
 			if ( aelNode.kind == kind )
 				i++;
 			
@@ -531,12 +535,12 @@ class VattiClipper {
 	private inline function addActiveEdge ( aelNode:ActiveEdge, edge:Edge, kind:PolyKind ):ActiveEdge {
 		var newNode:ActiveEdge = null;
 		
-		if ( edge.bottomX < aelNode.edge.bottomX ) {
+		if ( edge.bottomX < aelNode.bottomXIntercept ) {
 			aelNode.insertPrev ( edge, kind );
 			newNode = aelNode.prev;
 		} else {
 			while ( aelNode.next != null ) {
-				if ( edge.bottomX < aelNode.next.edge.bottomX ) {
+				if ( edge.bottomX < aelNode.next.bottomXIntercept ) {
 					aelNode.next.insertPrev ( edge, kind );
 					newNode = aelNode.next;
 					
@@ -577,7 +581,6 @@ class VattiClipper {
 		if ( ael == null )
 			return;
 		
-		var dy = yt - yb;
 		var aelNode = ael;
 		
 		do {
@@ -588,7 +591,7 @@ class VattiClipper {
 					var nextAelNode:ActiveEdge;
 					
 					if ( aelNode.contributing ) {	// Next edge should be also contributing
-						addLocalMin ( aelNode, aelNode.next, new Point ( topX ( edge, dy ), yt ) );
+						addLocalMin ( aelNode, aelNode.next, new Point ( aelNode.topXIntercept, yt ) );
 						
 						nextAelNode = aelNode.next.next;
 						aelNode.removeNext ();
@@ -613,11 +616,13 @@ class VattiClipper {
 					}
 					
 					aelNode.edge = edge.successor;
+					aelNode.bottomXIntercept = aelNode.edge.bottomX;
+					aelNode.bottomY = yt;
 					
 					addScanbeam ( edge.successor.topY );
 				}
 			} else
-				edge.bottomX = topX ( edge, dy );
+				aelNode.bottomXIntercept = aelNode.topXIntercept;
 			
 			aelNode = aelNode.next;
 		} while ( aelNode != null );
@@ -631,8 +636,8 @@ class VattiClipper {
 		aelNode.poly.appendPoint ( p );
 	}
 	
-	private static inline function topX ( edge:Edge, dy:Float ):Float {
-		return	edge.bottomX + edge.dx * dy;
+	private static inline function topX ( aelNode:ActiveEdge, y:Float ):Float {
+		return	aelNode.edge.bottomX + aelNode.edge.dx * ( y - aelNode.bottomY );
 	}
 	
 	private inline function addLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void {
@@ -710,26 +715,24 @@ class VattiClipper {
 	
 	private function buildIntersectionList ( yb:Float, yt:Float ):Void {
 		il = null; // Initialize IL to empty;
-		var dy = yt - yb;
 		
 		// Set Sorted Edge List to first node in Active Edge List
 		var selLeft = new DoublyList <ActiveEdge> ( ael );
 		var selRight = selLeft;
 		
+		ael.topXIntercept = topX ( ael, yt );
 		var e1Node = ael.next;
 		
 		while ( e1Node != null ) {
-			var e1 = e1Node.edge;
-			var topX1 = topX ( e1, dy );
+			e1Node.topXIntercept = topX ( e1Node, yt );
 			
 			/* Starting with the rightmost node of SEL we shall now move from right
 			 * to left through the nodes of SEL checking for an intersection with e1.
 			 * Let e2 denote the rightmost edge of SEL. */
 			var e2Node = selRight;
 			
-			// TODO: cache top x-es.
-			while ( e2Node != null && topX1 < topX ( e2Node.value.edge, dy ) ) {
-				var p = intersectionOf ( e1, e2Node.value.edge, yb );
+			while ( e2Node != null && e1Node.topXIntercept < e2Node.value.topXIntercept ) {
+				var p = intersectionOf ( e1Node, e2Node.value, yb );
 				addIntersection ( e2Node.value, e1Node, p );	// e2 is to the left of the e1 in the ael
 				
 				// Update e2 to denote edge to its left in SEL
@@ -776,7 +779,7 @@ class VattiClipper {
 	 * @param	yb	Bottom of the scanbeam.
 	 * @return	Point of intersection between two edges.
 	 */
-	private static inline function intersectionOf ( e1:Edge, e2:Edge, yb:Float ):Point {
+	private static inline function intersectionOf ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float ):Point {
 		/* ix, iy		- isec point
 		 * bx1, bx2		- bottom x-es of the edges
 		 * idy			- is eq to: iy minus bottom of the scanbeam
@@ -790,8 +793,9 @@ class VattiClipper {
 		 * Get the ix:
 		 *	ix == bx1 + dx1 * idy */
 		
-		var idy = ( e1.bottomX - e2.bottomX ) / ( e2.dx - e1.dx );
-		var p = new Point ( topX ( e1, idy ), yb + idy );
+		var idy = ( e1Node.bottomXIntercept - e2Node.bottomXIntercept ) / ( e2Node.edge.dx - e1Node.edge.dx );
+		var yIsec = yb + idy;
+		var p = new Point ( topX ( e1Node, yIsec ), yIsec );
 		
 		return	p;
 	}
@@ -1030,11 +1034,11 @@ class VattiClipper {
 		
 		while ( aelNode != null ) {
 			var e = aelNode.edge;
-			var topX = e.bottomX + e.dx * dy;
+			var topX = topX ( aelNode, cs_yt );
 			
 			var color = aelNode.side == Side.Left ? 0xff0000 : 0x00ff00;
 			graphics.lineStyle ( 1, color, 1 );
-			graphics.moveTo ( e.bottomX, cs_yb );
+			graphics.moveTo ( aelNode.bottomXIntercept, cs_yb );
 			graphics.lineTo ( topX, cs_yt );
 			
 			aelNode = aelNode.next;
@@ -1064,7 +1068,7 @@ class VattiClipper {
 		
 		while ( aelNode != null ) {
 			var e = aelNode.edge;
-			var topX = e.bottomX + e.dx * dy;
+			var topX = topX ( aelNode, cs_yt );
 			
 			var color:UInt;
 			
@@ -1075,7 +1079,7 @@ class VattiClipper {
 				color = 0x445599;
 			
 			graphics.lineStyle ( 1, color, 1 );
-			graphics.moveTo ( e.bottomX, cs_yb );
+			graphics.moveTo ( aelNode.bottomXIntercept, cs_yb );
 			graphics.lineTo ( topX, cs_yt );
 			
 			aelNode = aelNode.next;

@@ -24,6 +24,20 @@ class ActiveEdge {
 	 */
 	public var contributing:Bool;
 	/**
+	 * Y-coordinate of the edge's bottom vertex (point with the highest y).
+	 */
+	public var bottomY:Float;
+	/**
+	 * X-intercept of the edge with
+	 * the line at the bottom of the current scanbeam.
+	 */
+	public var bottomXIntercept:Float;
+	/**
+	 * X-intercept of the edge with
+	 * the line at the top of the current scanbeam.
+	 */
+	public var topXIntercept:Float;
+	/**
 	 * Pointer to partial polygon associated to the edge.
 	 */
 	public var poly:ChainedPolygon;

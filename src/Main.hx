@@ -43,7 +43,7 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*// Test: poly with two contributing local maximas
+		// Test: poly with two contributing local maximas
 		var subject = [
 			new Point ( 0, 50 ),
 			new Point ( 30, 100 ),
@@ -61,7 +61,7 @@ class Main {
 		];
 		
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( subject, PolyKind.Subject );*/
+		addInputPolygon ( subject, PolyKind.Subject );
 		
 		/*// Test: simple case of one self-intersection (hourglass)
 		var subject = [
@@ -82,7 +82,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: two clip polygons
+		/*// Test: two clip polygons
 		var subject = [
 			new Point ( 0, 100 ),
 			new Point ( 100, 250 ),
@@ -105,7 +105,7 @@ class Main {
 		
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( clip2, PolyKind.Clip );
+		addInputPolygon ( clip2, PolyKind.Clip );*/
 		
 		
 		/*// Test: self-intersections with even-odd rule (vatti clip classic behavior)
