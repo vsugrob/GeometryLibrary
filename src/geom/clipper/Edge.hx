@@ -22,37 +22,18 @@ class Edge {
 	 */
 	public var dx:Float;
 	/**
-	 * Does edge belong to clip or subject polygon?
-	 */
-	public var kind:PolyKind;
-	/**
-	 * Is it a left or right bound edge?
-	 */
-	public var side:Side;
-	/**
-	 * Does edge contribute to output polygons?
-	 */
-	public var contributing:Bool;
-	/**
-	 * Pointer to partial polygon associated to the edge.
-	 */
-	public var poly:ChainedPolygon;
-	/**
 	 * Pointer to succesor edge: an edge which belongs to the same bound and not lower than the current edge.
 	 */
 	public var successor:Edge;
+	/**
+	 * Whether an edge is horizontal. Remember that horizontal edges is a special case in Vatti clipping
+	 * algorithm and therefore requires special treatment in many situations.
+	 */
 	public var isHorizontal:Bool;
 	
-	public function new ( bottomX:Float, topY:Float, dx:Float, kind:PolyKind ) {
+	public function new ( bottomX:Float, topY:Float, dx:Float ) {
 		this.bottomX = bottomX;
 		this.topY = topY;
 		this.dx = dx;
-		this.kind = kind;
-	}
-	
-	public function toString ():String {
-		return	"(bottomX: " + bottomX + "topY: " + topY + "dx: " + dx + 
-			"kind: " + kind + "side: " + side + "contributing: " + contributing +
-			"poly: " + ( poly != null ? "assigned" : "null" ) + ")";
 	}
 }

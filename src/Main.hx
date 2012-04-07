@@ -8,10 +8,13 @@ import flash.display.StageAlign;
 import flash.display.StageScaleMode;
 import flash.events.Event;
 import flash.events.KeyboardEvent;
+import flash.geom.Matrix;
 import flash.geom.Point;
 import flash.Lib;
 import geom.ChainedPolygon;
+import geom.clipper.ActiveEdge;
 import geom.clipper.ClipperState;
+import geom.clipper.Edge;
 import geom.clipper.LocalMaxima;
 import geom.clipper.PolyKind;
 import geom.clipper.Side;
@@ -32,6 +35,11 @@ class Main {
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
 		stage.align = StageAlign.TOP_LEFT;
+		
+		debugSprite = new Sprite ();
+		debugSprite.x = 400;
+		debugSprite.y = 25;
+		stage.addChild ( debugSprite );
 		
 		inputPolys = new List <InputPolygon> ();
 		
@@ -74,7 +82,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: two clip polygons
+		// Test: two clip polygons
 		var subject = [
 			new Point ( 0, 100 ),
 			new Point ( 100, 250 ),
@@ -97,7 +105,7 @@ class Main {
 		
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( clip2, PolyKind.Clip );*/
+		addInputPolygon ( clip2, PolyKind.Clip );
 		
 		
 		/*// Test: self-intersections with even-odd rule (vatti clip classic behavior)
@@ -288,7 +296,7 @@ class Main {
 		addInputPolygon ( leftWing, PolyKind.Clip );
 		addInputPolygon ( rightWing, PolyKind.Clip );*/
 		
-		// Test: flipped many-rooted tooth
+		/*// Test: flipped many-rooted tooth
 		var bgPoly = [
 			new Point ( -10, -10 ),
 			new Point ( 600, 0 ),
@@ -314,18 +322,60 @@ class Main {
 		];
 		
 		addInputPolygon ( bgPoly, PolyKind.Subject );
-		addInputPolygon ( tooth, PolyKind.Clip );
-		
-		debugSprite = new Sprite ();
-		debugSprite.x = 400;
-		debugSprite.y = 25;
-		stage.addChild ( debugSprite );
+		addInputPolygon ( tooth, PolyKind.Clip );*/
 		
 		clipper = new VattiClipper ();
 		
-		for ( inputPoly in inputPolys ) {
+		for ( inputPoly in inputPolys )
 			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
-		}
+		
+		/*var angle = 0.0;
+		var dAngle = 0.1;
+		
+		while ( angle < 45 ) {
+			// Test: coincident edges of different kind
+			var bgPoly = [
+				new Point ( 300, 0 ),
+				new Point ( 600, 300 ),
+				new Point ( 300, 600 ),
+				new Point ( 0, 300 ),
+			];
+			
+			var clip = [
+				new Point ( 300, 200 ),
+				new Point ( 400, 100 ),
+				new Point ( 500, 200 ),
+				new Point ( 400, 300 ),
+			];
+			
+			//var clip = [
+				//new Point ( 300, 200 ),
+				//new Point ( 395, 105 ),
+				//new Point ( 495, 205 ),
+				//new Point ( 400, 300 ),
+			//];
+			
+			var center = getPolyCenter ( bgPoly );
+			rotatePoly ( bgPoly, angle * Math.PI / 180, center );
+			rotatePoly ( clip, angle * Math.PI / 180, center );
+			inputPolys = new List <InputPolygon> ();
+			addInputPolygon ( bgPoly, PolyKind.Subject );
+			addInputPolygon ( clip, PolyKind.Clip );
+			
+			clipper = new VattiClipper ();
+			
+			for ( inputPoly in inputPolys ) {
+				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+			}
+			
+			if ( angle == 2.400000000000001 ) {
+				break;
+			}
+			
+			clipper.clip ();
+			
+			angle += dAngle;
+		}*/
 		
 		//clipper.drawLml ( debugSprite.graphics );
 		//clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );
@@ -431,5 +481,38 @@ class Main {
 		
 		VattiClipper.endDrawPolySvg ( buf );
 		buf.add ( '</g>\n' );
+	}
+	
+	private static function rotatePoly ( pts:Iterable <Point>, angle:Float, center:Point = null ):Void {
+		var m = new Matrix ();
+		
+		if ( center == null )
+			center = getPolyCenter ( pts );
+		
+		m.translate ( -center.x, -center.y );
+		m.rotate ( angle );
+		m.translate ( center.x, center.y );
+		
+		for ( p in pts ) {
+			var rp = m.transformPoint ( p );
+			p.x = rp.x;
+			p.y = rp.y;
+		}
+	}
+	
+	private static function getPolyCenter ( pts:Iterable <Point> ):Point {
+		var x:Float = 0;
+		var y:Float = 0;
+		var num:Int = 0;
+		
+		for ( p in pts ) {
+			x += p.x;
+			y += p.y;
+			num++;
+		}
+		
+		var invNum:Float = 1 / num;
+		
+		return	new Point ( x * invNum, y * invNum );
 	}
 }

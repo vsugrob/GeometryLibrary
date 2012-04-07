@@ -14,11 +14,11 @@ class Intersection {
 	/**
 	 * A node in the Active Edge List.
 	 */
-	public var e1Node:DoublyList <Edge>;
+	public var e1Node:ActiveEdge;
 	/**
 	 * A node in the Active Edge List.
 	 */
-	public var e2Node:DoublyList <Edge>;
+	public var e2Node:ActiveEdge;
 	/**
 	 * Point of intersection of two edges.
 	 */
@@ -28,7 +28,7 @@ class Intersection {
 	 */
 	public var next:Intersection;
 	
-	public function new ( e1Node:DoublyList <Edge>, e2Node:DoublyList <Edge>, p:Point ) {
+	public function new ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point ) {
 		this.e1Node = e1Node;
 		this.e2Node = e2Node;
 		this.p = p;
