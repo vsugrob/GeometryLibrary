@@ -32,6 +32,31 @@ class Main {
 	static var inputPolys:List <InputPolygon>;
 	
 	static function main () {
+		var dGa = 0;
+		var dLa = 0;
+		var cnt = Std.int ( 1e6 );
+		
+		for ( i in 1...cnt ) {
+			var a = Math.random () * 1e6 + 1;
+			var b = Math.random () * 1e6 + 1;
+			var c = a / b;
+			var d = c * b;
+			
+			if ( d > a )
+				dGa++;
+			else if ( d < a )
+				dLa++;
+		}
+		
+		trace ( "d > a: " + dGa + '/' + cnt + " times " + ( dGa * 100.0 / cnt ) + '%' );
+		trace ( "d < a: " + dLa + '/' + cnt + " times " + ( dLa * 100.0 / cnt ) + '%' );
+		
+		/* It will always trace numbers very close to the following:
+		 * d > a: 54564/1000000 times 5.4564%
+		 * d < a: 54701/1000000 times 5.4701% */
+		
+		return;
+		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
 		stage.align = StageAlign.TOP_LEFT;
@@ -43,7 +68,7 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		// Test: poly with two contributing local maximas
+		/*// Test: poly with two contributing local maximas
 		var subject = [
 			new Point ( 0, 50 ),
 			new Point ( 30, 100 ),
@@ -61,7 +86,7 @@ class Main {
 		];
 		
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( subject, PolyKind.Subject );*/
 		
 		/*// Test: simple case of one self-intersection (hourglass)
 		var subject = [
@@ -324,12 +349,12 @@ class Main {
 		addInputPolygon ( bgPoly, PolyKind.Subject );
 		addInputPolygon ( tooth, PolyKind.Clip );*/
 		
-		clipper = new VattiClipper ();
+		/*clipper = new VattiClipper ();
 		
 		for ( inputPoly in inputPolys )
-			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );*/
 		
-		/*var angle = 0.0;
+		var angle = 0.0;
 		var dAngle = 0.1;
 		
 		while ( angle < 45 ) {
@@ -369,13 +394,16 @@ class Main {
 			}
 			
 			if ( angle == 2.400000000000001 ) {
+				var str1 = bgPoly [0] + ' ' + bgPoly [1];
+				var str2 = clip [1] + ' ' + clip [2];
+				
 				break;
 			}
 			
 			clipper.clip ();
 			
 			angle += dAngle;
-		}*/
+		}
 		
 		//clipper.drawLml ( debugSprite.graphics );
 		//clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );

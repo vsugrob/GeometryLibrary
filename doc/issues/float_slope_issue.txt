@@ -1,0 +1,22 @@
+var dGa = 0;
+var dLa = 0;
+var cnt = Std.int ( 1e6 );
+
+for ( i in 1...cnt ) {
+	var a = Math.random () * 1e6 + 1;
+	var b = Math.random () * 1e6 + 1;
+	var c = a / b;
+	var d = c * b;
+	
+	if ( d > a )
+		dGa++;
+	else if ( d < a )
+		dLa++;
+}
+
+trace ( "d > a: " + dGa + '/' + cnt + " times " + ( dGa * 100.0 / cnt ) + '%' );
+trace ( "d < a: " + dLa + '/' + cnt + " times " + ( dLa * 100.0 / cnt ) + '%' );
+
+/* It will always trace numbers very close to the following:
+ * d > a: 54564/1000000 times 5.4564%
+ * d < a: 54701/1000000 times 5.4701% */
