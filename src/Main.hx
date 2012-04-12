@@ -32,30 +32,26 @@ class Main {
 	static var inputPolys:List <InputPolygon>;
 	
 	static function main () {
-		var dGa = 0;
+		/*var dGa = 0;
 		var dLa = 0;
 		var cnt = Std.int ( 1e6 );
 		
 		for ( i in 1...cnt ) {
-			var a = Math.random () * 1e6 + 1;
-			var b = Math.random () * 1e6 + 1;
-			var c = a / b;
-			var d = c * b;
+			var dx = Math.random () * 5e1 + 50;
+			var dy = Math.random () * 5e1 + 50;
+			var slope = dx / dy;
+			var d = slope * dy;
 			
-			if ( d > a )
+			if ( d > dx )
 				dGa++;
-			else if ( d < a )
+			else if ( d < dx )
 				dLa++;
 		}
 		
 		trace ( "d > a: " + dGa + '/' + cnt + " times " + ( dGa * 100.0 / cnt ) + '%' );
 		trace ( "d < a: " + dLa + '/' + cnt + " times " + ( dLa * 100.0 / cnt ) + '%' );
 		
-		/* It will always trace numbers very close to the following:
-		 * d > a: 54564/1000000 times 5.4564%
-		 * d < a: 54701/1000000 times 5.4701% */
-		
-		return;
+		return;*/
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -349,6 +345,26 @@ class Main {
 		addInputPolygon ( bgPoly, PolyKind.Subject );
 		addInputPolygon ( tooth, PolyKind.Clip );*/
 		
+		/*// Test: first issue from "doc/issues/joints.svg"
+		var subject = [
+			new Point ( 0, 0 ),
+			new Point ( -50.46992166899145, -90.66692451015115 ),
+			new Point ( 10, -140 ),
+		];
+		
+		var clip = [
+			new Point ( -50.46992166899145, 50 ),
+			new Point ( -50.46992166899145, -150 ),
+			new Point ( 100, -160 ),
+			new Point ( 50, 100 ),
+		];
+		
+		debugSprite.x += 100;
+		debugSprite.y += 170;
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
 		/*clipper = new VattiClipper ();
 		
 		for ( inputPoly in inputPolys )
@@ -396,6 +412,7 @@ class Main {
 			if ( angle == 2.400000000000001 ) {
 				var str1 = bgPoly [0] + ' ' + bgPoly [1];
 				var str2 = clip [1] + ' ' + clip [2];
+				var str3 = clip [0] + ' ' + clip [1];
 				
 				break;
 			}
