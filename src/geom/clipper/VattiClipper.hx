@@ -1040,7 +1040,7 @@ class VattiClipper {
 	 * 3. 'kind' field (clip/subject)
 	 * 4. 'side' field (left/right)
 	 * 5. Position in ael*/
-	public function drawAelBySide ( graphics:Graphics ):Void {
+	public function drawAelBySide ( graphics:Graphics, zoom:Float = 1.0 ):Void {
 		if ( cs_yb == null || cs_yt == null )
 			return;
 		
@@ -1052,7 +1052,7 @@ class VattiClipper {
 			var topX = topX ( aelNode, cs_yt );
 			
 			var color = aelNode.side == Side.Left ? 0xff0000 : 0x00ff00;
-			graphics.lineStyle ( 1, color, 1 );
+			graphics.lineStyle ( 1 / zoom, color, 1 );
 			graphics.moveTo ( aelNode.bottomXIntercept, cs_yb );
 			graphics.lineTo ( topX, cs_yt );
 			
@@ -1130,15 +1130,15 @@ class VattiClipper {
 		}
 	}
 	
-	public function drawCurrentScanbeam ( graphics:Graphics ):Void {
+	public function drawCurrentScanbeam ( graphics:Graphics, zoom:Float = 1.0 ):Void {
 		if ( cs_yb != null ) {
-			graphics.lineStyle ( 1, 0xaa9900, 1 );
+			graphics.lineStyle ( 1 / zoom, 0xaa9900, 1 );
 			graphics.moveTo ( -10000, cs_yb );
 			graphics.lineTo ( 10000, cs_yb );
 		}
 		
 		if ( cs_yt != null ) {
-			graphics.lineStyle ( 1, 0x99aa00, 1 );
+			graphics.lineStyle ( 1 / zoom, 0x99aa00, 1 );
 			graphics.moveTo ( -10000, cs_yt );
 			graphics.lineTo ( 10000, cs_yt );
 		}
@@ -1151,7 +1151,7 @@ class VattiClipper {
 		}
 	}
 	
-	public function drawIntersectionScanline ( graphics:Graphics ):Void {
+	public function drawIntersectionScanline ( graphics:Graphics, zoom:Float = 1.0 ):Void {
 		if ( il == null )
 			return;
 		
@@ -1162,18 +1162,21 @@ class VattiClipper {
 			graphics.endFill ();
 		}
 		
-		graphics.lineStyle ( 1, 0xaa9977, 1 );
+		graphics.lineStyle ( 1 / zoom, 0xaa9977, 1 );
 		graphics.moveTo ( -10000, il.p.y );
 		graphics.lineTo ( 10000, il.p.y );
 	}
 	
-	public function drawIntersections ( graphics:Graphics ):Void {
+	public function drawIntersections ( graphics:Graphics, zoom:Float = 1.0 ):Void {
+		if ( zoom > 50 )
+			zoom = 50;
+		
 		var isec = il;
 		graphics.lineStyle ( 0, 0, 0 );
 		
 		if ( isec != null ) {
 			graphics.beginFill ( 0x5599ff, 1 );
-			graphics.drawCircle ( isec.p.x, isec.p.y, 2 );
+			graphics.drawCircle ( isec.p.x, isec.p.y, 2 / zoom );
 			graphics.endFill ();
 			
 			isec = isec.next;
@@ -1181,7 +1184,7 @@ class VattiClipper {
 		
 		while ( isec != null ) {
 			graphics.beginFill ( 0x0000ff, 0.7 );
-			graphics.drawCircle ( isec.p.x, isec.p.y, 2 );
+			graphics.drawCircle ( isec.p.x, isec.p.y, 2 / zoom );
 			graphics.endFill ();
 			
 			isec = isec.next;

@@ -30,6 +30,7 @@ class Main {
 	static var clipper:VattiClipper;
 	static var debugSprite:Sprite;
 	static var inputPolys:List <InputPolygon>;
+	static var panAndZoom:PanAndZoom;
 	
 	static function main () {
 		/*var dGa = 0;
@@ -61,6 +62,11 @@ class Main {
 		debugSprite.x = 400;
 		debugSprite.y = 25;
 		stage.addChild ( debugSprite );
+		
+		panAndZoom = new PanAndZoom ( debugSprite );
+		panAndZoom.addEventListener ( Event.COMPLETE, function ( e:Event ):Void {
+			drawCurrentStep ( panAndZoom.zoom );
+		} );
 		
 		inputPolys = new List <InputPolygon> ();
 		
@@ -365,13 +371,8 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*clipper = new VattiClipper ();
-		
-		for ( inputPoly in inputPolys )
-			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );*/
-		
 		var angle = 0.0;
-		var dAngle = 0.1;
+		var dAngle = 5;
 		
 		while ( angle < 45 ) {
 			// Test: coincident edges of different kind
@@ -399,7 +400,7 @@ class Main {
 			var center = getPolyCenter ( bgPoly );
 			rotatePoly ( bgPoly, angle * Math.PI / 180, center );
 			rotatePoly ( clip, angle * Math.PI / 180, center );
-			inputPolys = new List <InputPolygon> ();
+			//inputPolys = new List <InputPolygon> ();
 			addInputPolygon ( bgPoly, PolyKind.Subject );
 			addInputPolygon ( clip, PolyKind.Clip );
 			
@@ -409,11 +410,7 @@ class Main {
 				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 			}
 			
-			if ( angle == 2.400000000000001 ) {
-				var str1 = bgPoly [0] + ' ' + bgPoly [1];
-				var str2 = clip [1] + ' ' + clip [2];
-				var str3 = clip [0] + ' ' + clip [1];
-				
+			if ( angle == 20 ) {
 				break;
 			}
 			
@@ -422,6 +419,11 @@ class Main {
 			angle += dAngle;
 		}
 		
+		/*clipper = new VattiClipper ();
+		
+		for ( inputPoly in inputPolys )
+			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );*/
+		
 		//clipper.drawLml ( debugSprite.graphics );
 		//clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );
 		
@@ -429,7 +431,7 @@ class Main {
 		//while ( clipper.clipStep () ) {}
 		
 		//clipper.drawOutPolys ( debugSprite.graphics );
-		drawCurrentStep ();
+		drawCurrentStep ( panAndZoom.zoom );
 		
 		var stepNum = 0;
 		
@@ -439,7 +441,7 @@ class Main {
 				if ( clipper.clipStep () )
 					stepNum++;
 				
-				drawCurrentStep ();
+				drawCurrentStep ( panAndZoom.zoom );
 				
 				if ( clipper.clipperState == ClipperState.Finished )
 					clipper.drawOutPolys ( debugSprite.graphics );
@@ -462,19 +464,22 @@ class Main {
 		inputPolys.add ( new InputPolygon ( pts, kind ) );
 	}
 	
-	private static function drawCurrentStep ():Void {
+	private static function drawCurrentStep ( zoom:Float = 1.0 ):Void {
+		if ( zoom < 1 )
+			zoom = 1;
+		
 		debugSprite.graphics.clear ();
-		drawInputPolys ( debugSprite.graphics );
+		drawInputPolys ( debugSprite.graphics, zoom );
 		
-		clipper.drawCurrentScanbeam ( debugSprite.graphics );
-		clipper.drawIntersectionScanline ( debugSprite.graphics );
+		clipper.drawCurrentScanbeam ( debugSprite.graphics, zoom );
+		clipper.drawIntersectionScanline ( debugSprite.graphics, zoom );
 		
-		clipper.drawContributedPolys ( debugSprite.graphics, 0, 0.5, 2, 0xaa7700, 0.5 );
-		clipper.drawAelBySide ( debugSprite.graphics );
-		clipper.drawIntersections ( debugSprite.graphics );
+		clipper.drawContributedPolys ( debugSprite.graphics, 0, 0.5, 2 / zoom, 0xaa7700, 0.5 );
+		clipper.drawAelBySide ( debugSprite.graphics, zoom );
+		clipper.drawIntersections ( debugSprite.graphics, zoom );
 	}
 	
-	private static function drawInputPolys ( graphics:Graphics ):Void {
+	private static function drawInputPolys ( graphics:Graphics, zoom:Float = 1.0 ):Void {
 		var subjPolys = new List <InputPolygon> ();
 		var clipPolys = new List <InputPolygon> ();
 		
@@ -485,14 +490,14 @@ class Main {
 				clipPolys.add ( inputPoly );
 		}
 		
-		VattiClipper.beginDrawPoly ( graphics, 0x777777, 0.7, 1, 0xffdd77, 0.5 );
+		VattiClipper.beginDrawPoly ( graphics, 0x777777, 0.7, 1 / zoom, 0xffdd77, 0.5 );
 		
 		for ( inputPoly in subjPolys )
 			VattiClipper.drawPoly ( inputPoly.pts, graphics );
 		
 		VattiClipper.endDrawPoly ( graphics );
 		
-		VattiClipper.beginDrawPoly ( graphics, 0x777777, 0.7, 1, 0x77ddff, 0.5 );
+		VattiClipper.beginDrawPoly ( graphics, 0x777777, 0.7, 1 / zoom, 0x77ddff, 0.5 );
 		
 		for ( inputPoly in clipPolys )
 			VattiClipper.drawPoly ( inputPoly.pts, graphics );
