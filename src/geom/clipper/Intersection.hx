@@ -12,11 +12,11 @@ import geom.DoublyList;
  */
 class Intersection {
 	/**
-	 * A node in the Active Edge List.
+	 * Node in the Active Edge List.
 	 */
 	public var e1Node:ActiveEdge;
 	/**
-	 * A node in the Active Edge List.
+	 * Node in the Active Edge List.
 	 */
 	public var e2Node:ActiveEdge;
 	/**
@@ -24,14 +24,20 @@ class Intersection {
 	 */
 	public var p:Point;
 	/**
-	 * Pointer to a next intersection node which p.y is not less than p.y of the current node.
+	 * Value which is used for ordering intersection nodes vertically descending by y.
+	 * To do this we need to keep ordering by k ascending.
+	 */
+	public var k:Float;
+	/**
+	 * Pointer to next intersection node.
 	 */
 	public var next:Intersection;
 	
-	public function new ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point ) {
+	public function new ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point, k:Float ) {
 		this.e1Node = e1Node;
 		this.e2Node = e2Node;
 		this.p = p;
+		this.k = k;
 	}
 	
 	public inline function insert ( newIsec:Intersection ):Void {
@@ -39,7 +45,7 @@ class Intersection {
 		var prevIsec:Intersection = null;
 		
 		do {
-			if ( newIsec.p.y > curIsec.p.y ) {
+			if ( newIsec.k < curIsec.k ) {
 				if ( prevIsec != null )
 					prevIsec.next = newIsec;
 				

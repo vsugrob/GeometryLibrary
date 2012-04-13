@@ -715,6 +715,7 @@ class VattiClipper {
 	
 	private function buildIntersectionList ( yb:Float, yt:Float ):Void {
 		il = null; // Initialize IL to empty;
+		var dy = yt - yb;
 		
 		// Set Sorted Edge List to first node in Active Edge List
 		var selLeft = new DoublyList <ActiveEdge> ( ael );
@@ -732,8 +733,8 @@ class VattiClipper {
 			var e2Node = selRight;
 			
 			while ( e2Node != null && e1Node.topXIntercept < e2Node.value.topXIntercept ) {
-				var p = intersectionOf ( e1Node, e2Node.value, yb );
-				addIntersection ( e2Node.value, e1Node, p );	// e2 is to the left of the e1 in the ael
+				var isec = intersectionOf ( e2Node.value, e1Node, yb, dy );	// e2 is to the left of the e1 in the ael
+				addIntersection ( isec );
 				
 				// Update e2 to denote edge to its left in SEL
 				e2Node = e2Node.prev;
@@ -757,15 +758,13 @@ class VattiClipper {
 		}
 	}
 	
-	private inline function addIntersection ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point ):Void {
-		var isec = new Intersection ( e1Node, e2Node, p );
-		
+	private inline function addIntersection ( isec:Intersection ):Void {
 		if ( il == null )
 			il = isec;
 		else {
 			il.insert ( isec );
 			
-			if ( p.y > il.p.y )
+			if ( isec.k < il.k )
 				il = isec;
 		}
 	}
@@ -775,29 +774,45 @@ class VattiClipper {
 	 * edges intersects. This function only calculates where exactly intersection is and it may have
 	 * unpredicted behavior in case when edges are parallel to each other.
 	 * @param	e1	First edge known to intersect other edge.
-	 * @param	e2	Second edge.
+	 * @param	e2	Second edge. Should be to the right of the e1 in Active Edge List!
 	 * @param	yb	Bottom of the scanbeam.
-	 * @return	Point of intersection between two edges.
+	 * @param	dy	Difference between top and bottom of the scanbeam.
+	 * @return	Intersection between two edges.
 	 */
-	private static inline function intersectionOf ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float ):Point {
-		/* ix, iy		- isec point
-		 * bx1, bx2		- bottom x-es of the edges
-		 * idy			- is eq to: iy minus bottom of the scanbeam
+	private static inline function intersectionOf ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float, dy:Float ):Intersection {
+		/* dxt is an absolute value of difference between top x intercepts.
+		 * dxb is an absolute value of difference between bottom x intercepts.
 		 * 
-		 * Given:
-		 *	ix == bx1 + dx1 * idy == bx2 + dx2 * idy
-		 * Rearrange:
-		 *	bx1 - bx2 == ( dx2 - dx1 ) * idy
-		 * Get the idy (and therefore iy too):
-		 *	idy == ( bx1 - bx2 ) / ( dx2 - dx1 )
-		 * Get the ix:
-		 *	ix == bx1 + dx1 * idy */
-		
-		var idy = ( e1Node.bottomXIntercept - e2Node.bottomXIntercept ) / ( e2Node.edge.dx - e1Node.edge.dx );
-		var yIsec = yb + idy;
+		 * System of equations where dy and k are known (k = dxb / dxt),
+		 * ht and hb are altitudes for top and bottom
+		 * triangles respectively:
+		 * dy == hb + ht
+		 * k == hb / ht
+		 * 
+		 * From the second eq:
+		 * ht = hb / k
+		 * 
+		 * Substitute into the first eq:
+		 * dy == hb + hb / k
+		 * dy == hb * ( 1 + 1 / k )
+		 * dy / ( 1 + 1 / k ) == hb
+		 * 
+		 * Improve numerical stability by substituting k:
+		 * dy / ( 1 + 1 / ( dxb / dxt ) ) == hb
+		 * dy / ( 1 + dxt / dxb ) == hb
+		 * dy / ( ( dxb + dxt ) / dxb ) == hb
+		 * dy * dxb / ( dxb + dxt ) == hb
+		 * 
+		 * NOTE on why k = dxb / dxt, not dxt / dxb:
+		 * dxb can be zero while dxt can't.*/
+		var dxt = Math.abs ( e1Node.topXIntercept - e2Node.topXIntercept );
+		var dxb = Math.abs ( e1Node.bottomXIntercept - e2Node.bottomXIntercept );
+		var k = dxb / dxt;
+		var hb = dy * dxb / ( dxb + dxt );
+		var yIsec = yb + hb;
 		var p = new Point ( topX ( e1Node, yIsec ), yIsec );
 		
-		return	p;
+		return	new Intersection ( e1Node, e2Node, p, k );
 	}
 	
 	private function processIntersectionList ():Void {
