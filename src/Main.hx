@@ -410,7 +410,7 @@ class Main {
 				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 			}
 			
-			if ( angle == 20 ) {
+			if ( angle >= 20 ) {
 				break;
 			}
 			
@@ -460,6 +460,14 @@ class Main {
 	}
 	
 	private static function addInputPolygon ( pts:Array <Point>, kind:PolyKind ):Void {
+		/*var n = 4;
+		var m = Math.pow ( 10, n );
+		
+		for ( p in pts ) {
+			p.x = Math.round ( p.x * m ) / m;
+			p.y = Math.round ( p.y * m ) / m;
+		}*/
+		
 		pts.push ( pts [0] );
 		inputPolys.add ( new InputPolygon ( pts, kind ) );
 	}

@@ -1171,23 +1171,27 @@ class VattiClipper {
 		if ( zoom > 50 )
 			zoom = 50;
 		
-		var isec = il;
+		var isec:Intersection;
 		graphics.lineStyle ( 0, 0, 0 );
+		
+		if ( il != null ) {
+			isec = il.next;
+			
+			while ( isec != null ) {
+				graphics.beginFill ( 0x0000ff, 0.7 );
+				graphics.drawCircle ( isec.p.x, isec.p.y, 2 / zoom );
+				graphics.endFill ();
+				
+				isec = isec.next;
+			}
+		}
+		
+		isec = il;
 		
 		if ( isec != null ) {
 			graphics.beginFill ( 0x5599ff, 1 );
 			graphics.drawCircle ( isec.p.x, isec.p.y, 2 / zoom );
 			graphics.endFill ();
-			
-			isec = isec.next;
-		}
-		
-		while ( isec != null ) {
-			graphics.beginFill ( 0x0000ff, 0.7 );
-			graphics.drawCircle ( isec.p.x, isec.p.y, 2 / zoom );
-			graphics.endFill ();
-			
-			isec = isec.next;
 		}
 	}
 }
