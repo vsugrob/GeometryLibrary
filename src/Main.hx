@@ -33,27 +33,6 @@ class Main {
 	static var panAndZoom:PanAndZoom;
 	
 	static function main () {
-		/*var dGa = 0;
-		var dLa = 0;
-		var cnt = Std.int ( 1e6 );
-		
-		for ( i in 1...cnt ) {
-			var dx = Math.random () * 5e1 + 50;
-			var dy = Math.random () * 5e1 + 50;
-			var slope = dx / dy;
-			var d = slope * dy;
-			
-			if ( d > dx )
-				dGa++;
-			else if ( d < dx )
-				dLa++;
-		}
-		
-		trace ( "d > a: " + dGa + '/' + cnt + " times " + ( dGa * 100.0 / cnt ) + '%' );
-		trace ( "d < a: " + dLa + '/' + cnt + " times " + ( dLa * 100.0 / cnt ) + '%' );
-		
-		return;*/
-		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
 		stage.align = StageAlign.TOP_LEFT;
@@ -371,7 +350,24 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		var angle = 0.0;
+		// Test: edge intersecting join in local minima
+		var subject = [
+			new Point ( 300, 100 ),
+			new Point ( 500, 300 ),
+			new Point ( 300, 500 ),
+			new Point ( 100, 300 ),
+		];
+		
+		var clip = [
+			new Point ( 300, 300 ),
+			new Point ( 300, 0 ),
+			new Point ( 600, 100 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );
+		
+		/*var angle = 0.0;
 		var dAngle = 5;
 		
 		while ( angle < 45 ) {
@@ -410,19 +406,19 @@ class Main {
 				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 			}
 			
-			if ( angle >= 20 ) {
+			if ( angle >= 15 ) {
 				break;
 			}
 			
 			clipper.clip ();
 			
 			angle += dAngle;
-		}
+		}*/
 		
-		/*clipper = new VattiClipper ();
+		clipper = new VattiClipper ();
 		
 		for ( inputPoly in inputPolys )
-			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );*/
+			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 		
 		//clipper.drawLml ( debugSprite.graphics );
 		//clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );
@@ -447,6 +443,8 @@ class Main {
 					clipper.drawOutPolys ( debugSprite.graphics );
 				
 				trace ( "clipStep () #" + stepNum + ", next action: " + clipper.clipperState );
+				
+				clipper.traceNextIntersection ();
 			} else if ( kb.keyCode == 49 )	// 1
 				clipper.drawAelBySide ( debugSprite.graphics );
 			else if ( kb.keyCode == 50 )	// 2
@@ -455,7 +453,10 @@ class Main {
 				var buf = new StringBuf ();
 				drawInputPolysSvg ( buf );
 				Clipboard.generalClipboard.setData ( ClipboardFormats.TEXT_FORMAT, buf.toString () );
-			}
+			} else if ( kb.keyCode == 65 )	// a
+				clipper.traceAel ();
+			else if ( kb.keyCode == 73 )	// i
+				clipper.traceIl ();
 		} );
 	}
 	

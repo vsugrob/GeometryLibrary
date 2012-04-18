@@ -225,6 +225,16 @@ class DoublyList <TElement> {
 		b.prev = tmp;
 	}
 	
+	/**
+	 * Checks whether any of the given nodes immediately followed by other in list.
+	 * @param	a	First node.
+	 * @param	b	Second node.
+	 * @return	Boolean indicating adjacency.
+	 */
+	public static inline function areAdjacent <TElement> ( a:DoublyList <TElement>, b:DoublyList <TElement> ):Bool {
+		return	( a.next == b && b.prev == a ) || ( b.next == a && a.prev == b );
+	}
+	
 	public function toString ():String {
 		var dValue:Dynamic = value;
 		var str = "{element: " + dValue.toString () + ", ";

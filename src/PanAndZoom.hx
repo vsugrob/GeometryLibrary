@@ -44,7 +44,6 @@ class PanAndZoom extends EventDispatcher {
 		visual.stage.addEventListener ( MouseEvent.MOUSE_DOWN, startDrag );
 		visual.stage.addEventListener ( MouseEvent.MOUSE_MOVE, mouseMoveHandler );
 		visual.stage.addEventListener ( MouseEvent.MOUSE_UP, endDrag );
-		visual.stage.addEventListener ( MouseEvent.MOUSE_OUT, endDrag );
 	}
 	
 	private function mouseWheelHandler ( e:MouseEvent ):Void {

@@ -159,6 +159,9 @@ class VattiClipper {
 		var msg:String = "    ";
 		msg += e1Node.side + " " + e1Node.kind + " x " + e2Node.side + " " + e2Node.kind + "\n";
 		
+		if ( !ActiveEdge.areAdjacent ( e1Node, e2Node ) )
+			msg += "ATTEMPT TO SWAP NON-ADJACENT NODES\n";
+		
 		if ( e1Node.kind == e2Node.kind ) {
 			msg += "Like edge intersection";
 			/* Like edge intersection:
@@ -590,7 +593,12 @@ class VattiClipper {
 				if ( edge.successor == null ) {			// Local minima
 					var nextAelNode:ActiveEdge;
 					
-					if ( aelNode.contributing ) {	// Next edge should be also contributing
+					if ( aelNode.contributing ) {	// Next edge should be also contributing and its topY should be equal to yt
+						// Debug assert necessary until numerical errors in algo present:
+						if ( aelNode.next.edge.topY != yt ) {
+							throw 'Attempted to addLocalMin with two disjoint edges.';
+						}
+						
 						addLocalMin ( aelNode, aelNode.next, new Point ( aelNode.topXIntercept, yt ) );
 						
 						nextAelNode = aelNode.next.next;
@@ -1044,20 +1052,24 @@ class VattiClipper {
 		if ( cs_yb == null || cs_yt == null )
 			return;
 		
-		var dy = cs_yt - cs_yb;
 		var aelNode = ael;
 		
 		while ( aelNode != null ) {
-			var e = aelNode.edge;
-			var topX = topX ( aelNode, cs_yt );
-			
-			var color = aelNode.side == Side.Left ? 0xff0000 : 0x00ff00;
-			graphics.lineStyle ( 1 / zoom, color, 1 );
-			graphics.moveTo ( aelNode.bottomXIntercept, cs_yb );
-			graphics.lineTo ( topX, cs_yt );
+			drawAelNodeBySide ( graphics, aelNode, zoom );
 			
 			aelNode = aelNode.next;
 		}
+	}
+	
+	private function drawAelNodeBySide ( graphics:Graphics, aelNode:ActiveEdge, zoom:Float = 1.0 ):Void {
+		var dy = cs_yt - cs_yb;
+		var e = aelNode.edge;
+		var topX = topX ( aelNode, cs_yt );
+		
+		var color = aelNode.side == Side.Left ? 0xff0000 : 0x00ff00;
+		graphics.lineStyle ( 1 / zoom, color, 1 );
+		graphics.moveTo ( aelNode.bottomXIntercept, cs_yb );
+		graphics.lineTo ( topX, cs_yt );
 	}
 	
 	public function drawAelByPoly ( graphics:Graphics ):Void {
@@ -1189,9 +1201,76 @@ class VattiClipper {
 		isec = il;
 		
 		if ( isec != null ) {
+			drawAelNodeBySide ( graphics, isec.e1Node, zoom );
+			drawAelNodeBySide ( graphics, isec.e2Node, zoom );
+			
+			graphics.lineStyle ( 0, 0, 0 );
 			graphics.beginFill ( 0x5599ff, 1 );
 			graphics.drawCircle ( isec.p.x, isec.p.y, 2 / zoom );
 			graphics.endFill ();
 		}
+	}
+	
+	public function traceNextIntersection ():Void {
+		var isec = il;
+		
+		if ( isec != null ) {
+			trace ( 'Next intersection: ' +
+				getActiveEdgeDescription ( isec.e1Node ) + ' x ' +
+				getActiveEdgeDescription ( isec.e2Node )
+			);
+		}
+	}
+	
+	private function getActiveEdgeDescription ( aelNode:ActiveEdge ):String {
+		return	( aelNode.contributing ? 'c' : '' ) +
+			( aelNode.side == Side.Left ? 'l' : 'r' ) +
+			( aelNode.kind == PolyKind.Clip ? 'c' : 's' );
+	}
+	
+	public function traceAel ():Void {
+		var msg = 'Active Edge List:';
+		
+		if ( ael != null ) {
+			var aelNode = ael;
+			
+			while ( aelNode != null ) {
+				msg += ' ' + getActiveEdgeDescription ( aelNode );
+				
+				aelNode = aelNode.next;
+			}
+		} else
+			msg += ' NONE';
+		
+		trace ( msg );
+	}
+	
+	public function traceIl ():Void {
+		var msg = 'Intersection List';
+		
+		if ( il != null ) {
+			var count = 0;
+			var isec = il;
+			
+			while ( isec != null ) {
+				isec = isec.next;
+				count++;
+			}
+			
+			msg += ' (' + count + '):\n';
+			
+			isec = il;
+			
+			while ( isec != null ) {
+				msg += '(' + getActiveEdgeDescription ( isec.e1Node ) + ' x ' +
+					getActiveEdgeDescription ( isec.e2Node ) + ' at k: ' +
+					isec.k + ')\n';
+				
+				isec = isec.next;
+			}
+		} else
+			msg += ': NONE';
+		
+		trace ( msg );
 	}
 }
