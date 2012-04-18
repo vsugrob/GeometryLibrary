@@ -31,20 +31,21 @@ class Scanbeam {
 		
 		do {
 			if ( newSb.y == curSb.y )
-				return;
+				break;
 			else if ( newSb.y > curSb.y ) {
 				if ( prevSb != null )
 					prevSb.next = newSb;
 				
 				newSb.next = curSb;
 				
-				return;
+				break;
 			}
 			
 			prevSb = curSb;
 			curSb = curSb.next;
 		} while ( curSb != null );
 		
-		prevSb.next = newSb;
+		if ( curSb == null )
+			prevSb.next = newSb;
 	}
 }

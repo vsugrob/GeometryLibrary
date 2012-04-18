@@ -51,13 +51,14 @@ class Intersection {
 				
 				newIsec.next = curIsec;
 				
-				return;
+				break;
 			}
 			
 			prevIsec = curIsec;
 			curIsec = curIsec.next;
 		} while ( curIsec != null );
 		
-		prevIsec.next = newIsec;
+		if ( curIsec == null )
+			prevIsec.next = newIsec;
 	}
 }

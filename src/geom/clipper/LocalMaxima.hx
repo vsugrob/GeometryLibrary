@@ -39,13 +39,14 @@ class LocalMaxima {
 				
 				newLm.next = curLm;
 				
-				return;
+				break;
 			}
 			
 			prevLm = curLm;
 			curLm = curLm.next;
 		} while ( curLm != null );
 		
-		prevLm.next = newLm;
+		if ( curLm == null )
+			prevLm.next = newLm;
 	}
 }
