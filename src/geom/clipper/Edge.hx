@@ -17,6 +17,7 @@ class Edge {
 	public var topY:Float;
 	/**
 	 * The reciprocal of the slope of the edge.
+	 * It may contain NaN designating that edge is LocalMinima.
 	 */
 	public var dx:Float;
 	/**
@@ -28,6 +29,10 @@ class Edge {
 	 * algorithm and therefore requires special treatment in many situations.
 	 */
 	public var isHorizontal:Bool;
+	
+	public inline function isLocalMinima ():Bool {
+		return	Math.isNaN ( dx );
+	}
 	
 	public function new ( bottomX:Float, topY:Float, dx:Float ) {
 		this.bottomX = bottomX;

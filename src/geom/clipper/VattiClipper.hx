@@ -221,6 +221,8 @@ class VattiClipper {
 			msg += "addLocalMax ( e1Node, e2Node, isec.p );";
 		}
 		
+		/* TODO: there is a theory that only adjacent nodes are subject for being swapped.
+		 * Proove it, change source accordingly and you will get speedup in swapping */
 		// Swap e1 and e2 position in AEL
 		ActiveEdge.swap ( e1Node, e2Node );
 		
@@ -306,6 +308,8 @@ class VattiClipper {
 					
 					if ( firstJointIsLocalMimima == null )
 						firstJointIsLocalMimima = true;
+					
+					addLocalMinima ( prevEdge, edge, p0.x, p0.y );
 				}
 				
 				if ( firstJointIsLocalMimima == null )
@@ -349,6 +353,7 @@ class VattiClipper {
 							reverseHorizontalEdge ( firstEdge );	// [Case 4 subcase]
 						else {
 							// Pure local minimum, [Case 4]
+							addLocalMinima ( lastEdge, firstEdge, p0.x, p0.y );
 						}
 					}
 				} else {
@@ -391,6 +396,12 @@ class VattiClipper {
 		addScanbeam ( y );
 		addScanbeam ( edge1.topY );
 		addScanbeam ( edge2.topY );
+	}
+	
+	private inline function addLocalMinima ( edge1:Edge, edge2:Edge, x:Float, y:Float ):Void {
+		var lMin = new LocalMinima ( x, y, edge1, edge2 );
+		edge1.successor = lMin;
+		edge2.successor = lMin;
 	}
 	
 	private inline function addScanbeam ( y:Float ):Void {
@@ -590,7 +601,7 @@ class VattiClipper {
 			var edge = aelNode.edge;
 			
 			if ( edge.topY == yt ) {	// Edge terminates at the top of the scanbeam
-				if ( edge.successor == null ) {			// Local minima
+				if ( edge.successor.isLocalMinima () ) {
 					var nextAelNode:ActiveEdge;
 					
 					if ( aelNode.contributing ) {	// Next edge should be also contributing and its topY should be equal to yt
@@ -881,6 +892,8 @@ class VattiClipper {
 				e2Node.contributing = true;
 			}
 			
+			/* TODO: there is a theory that only adjacent nodes are subject for being swapped.
+			 * Proove it, change source accordingly and you will get speedup in swapping */
 			// Swap e1Node and e2Node position in AEL
 			ActiveEdge.swap ( isec.e1Node, isec.e2Node );
 			
@@ -942,7 +955,7 @@ class VattiClipper {
 			bottomX = topX;
 			startY = edge.topY;
 			edge = edge.successor;
-		} while ( edge != null );
+		} while ( !edge.isLocalMinima () );
 	}
 	
 	public function drawSbl ( graphics:Graphics, startX:Float, width:Float ):Void {
