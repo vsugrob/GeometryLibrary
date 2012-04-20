@@ -31,6 +31,10 @@ class VattiClipper {
 	 * List of intersections calculated in buildIntersectionList ().
 	 */
 	private var il:Intersection;
+	/**
+	 * Pointer to last intersection in il.
+	 */
+	private var ilLast:Intersection;
 	
 	public function new () {
 		this.outPolys = new List <ChainedPolygon> ();
@@ -604,21 +608,18 @@ class VattiClipper {
 				if ( edge.successor.isLocalMinima () ) {
 					var nextAelNode:ActiveEdge;
 					
-					if ( aelNode.contributing ) {	// Next edge should be also contributing and its topY should be equal to yt
-						// Debug assert necessary until numerical errors in algo present:
-						if ( aelNode.next.edge.topY != yt ) {
-							throw 'Attempted to addLocalMin with two disjoint edges.';
-						}
-						
-						addLocalMin ( aelNode, aelNode.next, new Point ( aelNode.topXIntercept, yt ) );
-						
-						nextAelNode = aelNode.next.next;
-						aelNode.removeNext ();
-						aelNode.removeSelf ();
-					} else {
-						nextAelNode = aelNode.next;
-						aelNode.removeSelf ();
+					// Debug assert necessary until numerical errors in algo present:
+					if ( aelNode.next.edge.topY != yt ) {
+						throw 'Attempted to addLocalMin with two disjoint edges.';
 					}
+					
+					// Next edge should be also contributing and its topY should be equal to yt
+					if ( aelNode.contributing )
+						addLocalMin ( aelNode, aelNode.next, new Point ( edge.successor.bottomX, yt ) );
+					
+					nextAelNode = aelNode.next.next;
+					aelNode.removeNext ();
+					aelNode.removeSelf ();
 					
 					if ( ael == aelNode )
 						ael = nextAelNode;
@@ -734,6 +735,7 @@ class VattiClipper {
 	
 	private function buildIntersectionList ( yb:Float, yt:Float ):Void {
 		il = null; // Initialize IL to empty;
+		ilLast = null;
 		var dy = yt - yb;
 		
 		// Set Sorted Edge List to first node in Active Edge List
@@ -775,17 +777,58 @@ class VattiClipper {
 			
 			e1Node = e1Node.next;
 		}
+		
+		// Process intersections lying exactly in local minimas which previous
+		// algorithm wasn't able to detect.
+		do {
+			if ( selLeft.value.edge.topY == yt && selLeft.value.edge.successor.isLocalMinima () ) {
+				var lMin = cast ( selLeft.value.edge.successor, LocalMinima );
+				var otherEdge:Edge = selLeft.value.edge == lMin.edge2 ? lMin.edge1 : lMin.edge2;
+				
+				// Find selNode pointing to other edge ending at local minima
+				selRight = selLeft.next;
+				
+				while ( selRight.value.edge != otherEdge ) { selRight = selRight.next; }
+				
+				var p = new Point ( lMin.bottomX, lMin.topY );
+				
+				// Intersect right edge with all edges between bounds
+				while ( selRight.prev != selLeft ) {
+					var isec = new Intersection ( selRight.prev.value, selRight.value, p, Math.POSITIVE_INFINITY );
+					DoublyList.swapAdjacent ( selRight.prev, selRight );
+					
+					// Add isec to the END of the il
+					addIntersectionLast ( isec );
+				}
+				
+				selLeft = selRight;
+			}
+			
+			selLeft = selLeft.next;
+		} while ( selLeft != null );
 	}
 	
 	private inline function addIntersection ( isec:Intersection ):Void {
-		if ( il == null )
+		if ( il == null ) {
 			il = isec;
-		else {
+			ilLast = isec;
+		} else {
 			il.insert ( isec );
 			
 			if ( isec.k < il.k )
 				il = isec;
+			else if ( isec.k >= ilLast.k )
+				ilLast = isec;
 		}
+	}
+	
+	private inline function addIntersectionLast ( isec:Intersection ):Void {
+		if ( ilLast != null )
+			ilLast.next = isec;
+		else
+			il = isec;
+		
+		ilLast = isec;
 	}
 	
 	/**

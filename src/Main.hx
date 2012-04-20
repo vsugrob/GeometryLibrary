@@ -16,6 +16,7 @@ import geom.clipper.ActiveEdge;
 import geom.clipper.ClipperState;
 import geom.clipper.Edge;
 import geom.clipper.LocalMaxima;
+import geom.clipper.LocalMinima;
 import geom.clipper.PolyKind;
 import geom.clipper.Side;
 import geom.clipper.VattiClipper;
@@ -350,7 +351,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: edge intersecting join in local minima
+		/*// Test: edge intersecting join in local minima
 		var subject = [
 			new Point ( 300, 100 ),
 			new Point ( 500, 300 ),
@@ -365,10 +366,14 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*var angle = 0.0;
-		var dAngle = 5;
+		// Last unknown bug with:
+		// var dAngle = 1;
+		// break on angle >= 21
+		
+		var angle = 0.0;
+		var dAngle = 1;
 		
 		while ( angle < 45 ) {
 			// Test: coincident edges of different kind
@@ -406,14 +411,17 @@ class Main {
 				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 			}
 			
-			if ( angle >= 15 ) {
+			try {
+				clipper.clip ();
+			} catch ( ex:Dynamic ) {
+				trace ( 'EXCEPTION. angle: ' + angle + ' dAngle: ' + dAngle );
+				trace ( ex );
+				
 				break;
 			}
 			
-			clipper.clip ();
-			
 			angle += dAngle;
-		}*/
+		}
 		
 		clipper = new VattiClipper ();
 		
