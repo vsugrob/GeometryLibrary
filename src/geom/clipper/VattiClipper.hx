@@ -220,8 +220,6 @@ class VattiClipper {
 			}
 		}
 		
-		/* TODO: there is a theory that only adjacent nodes are subject for being swapped.
-		 * Proove it, change source accordingly and you will get speedup in swapping */
 		// Swap e1 and e2 position in AEL
 		ActiveEdge.swapAdjacent ( e1Node, e2Node );
 		
@@ -928,8 +926,6 @@ class VattiClipper {
 				}
 			}
 			
-			/* TODO: there is a theory that only adjacent nodes are subject for being swapped.
-			 * Proove it, change source accordingly and you will get speedup in swapping */
 			// Swap e1Node and e2Node position in AEL
 			ActiveEdge.swapAdjacent ( e1Node, e2Node );
 			
