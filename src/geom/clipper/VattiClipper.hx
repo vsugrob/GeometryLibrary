@@ -196,41 +196,28 @@ class VattiClipper {
 			var tmpSide = e1Node.side;
 			e1Node.side = e2Node.side;
 			e2Node.side = tmpSide;
-		} else if ( ( e1Node.side == Side.Left  && e1Node.kind == PolyKind.Subject &&
-					  e2Node.side == Side.Right && e2Node.kind == PolyKind.Clip ) ||
-					( e1Node.side == Side.Left  && e1Node.kind == PolyKind.Clip &&
-					  e2Node.side == Side.Right && e2Node.kind == PolyKind.Subject ) )	// (LS ∩ RC) or (LC ∩ RS) → MX
-		{
-			addLocalMin ( e1Node, e2Node, isec.p );
-			e1Node.contributing = false;
-			e2Node.contributing = false;
-			e1Node.poly = null;
-			e2Node.poly = null;
-			
-			msg += "addLocalMin ( e1Node, e2Node, isec.p );";
-		} else if ( ( e1Node.side == Side.Left && e1Node.kind == PolyKind.Clip &&
-					  e2Node.side == Side.Left && e2Node.kind == PolyKind.Subject ) ||
-					( e1Node.side == Side.Left && e1Node.kind == PolyKind.Subject &&
-					  e2Node.side == Side.Left && e2Node.kind == PolyKind.Clip ) )		// (LC ∩ LS) or (LS ∩ LC) → LI
-		{
-			addLeft ( e2Node, isec.p );
-			msg += "addLeft ( e2Node, isec.p );";
-		} else if ( ( e1Node.side == Side.Right && e1Node.kind == PolyKind.Clip &&
-					  e2Node.side == Side.Right && e2Node.kind == PolyKind.Subject ) ||
-					( e1Node.side == Side.Right && e1Node.kind == PolyKind.Subject &&
-					  e2Node.side == Side.Right && e2Node.kind == PolyKind.Clip ) )		// (RC ∩ RS) or (RS ∩ RC) → RI
-		{
-			addRight ( e1Node, isec.p );
-			msg += "addRight ( e1Node, isec.p );";
-		} else if ( ( e1Node.side == Side.Right && e1Node.kind == PolyKind.Subject &&
-					  e2Node.side == Side.Left  && e2Node.kind == PolyKind.Clip ) ||
-					( e1Node.side == Side.Right && e1Node.kind == PolyKind.Clip &&
-					  e2Node.side == Side.Left  && e2Node.kind == PolyKind.Subject ) )	// (RS ∩ LC) or (RC ∩ LS) → MN
-		{
-			addLocalMax ( e1Node, e2Node, isec.p );
-			e1Node.contributing = true;
-			e2Node.contributing = true;
-			msg += "addLocalMax ( e1Node, e2Node, isec.p );";
+		} else if ( e1Node.side == Side.Left ) {
+			if ( e2Node.side == Side.Left ) { 				// (LC ∩ LS) or (LS ∩ LC) → LI
+				addLeft ( e2Node, isec.p );
+				msg += "addLeft ( e2Node, isec.p );";
+			} else /*if ( e2Node.side == Side.Right )*/ {	// (LS ∩ RC) or (LC ∩ RS) → MX
+				addLocalMin ( e1Node, e2Node, isec.p );
+				e1Node.contributing = false;
+				e2Node.contributing = false;
+				e1Node.poly = null;
+				e2Node.poly = null;
+				msg += "addLocalMin ( e1Node, e2Node, isec.p );";
+			}
+		} else /*if ( e1Node.side == Side.Right )*/ {
+			if ( e2Node.side == Side.Right ) {				// (RC ∩ RS) or (RS ∩ RC) → RI
+				addRight ( e1Node, isec.p );
+				msg += "addRight ( e1Node, isec.p );";
+			} else if ( e2Node.side == Side.Left ) { 		// (RS ∩ LC) or (RC ∩ LS) → MN
+				addLocalMax ( e1Node, e2Node, isec.p );
+				e1Node.contributing = true;
+				e2Node.contributing = true;
+				msg += "addLocalMax ( e1Node, e2Node, isec.p );";
+			}
 		}
 		
 		/* TODO: there is a theory that only adjacent nodes are subject for being swapped.
@@ -911,7 +898,7 @@ class VattiClipper {
 					if ( e1Node.side == Side.Left ) {	// Then we assume that e2Node is right
 						addLeft ( e1Node, isec.p );
 						addRight ( e2Node, isec.p );
-					} else {						// e1Node is right e2Node is left
+					} else {							// e1Node is right e2Node is left
 						addLeft ( e2Node, isec.p );
 						addRight ( e1Node, isec.p );
 					}
@@ -921,36 +908,24 @@ class VattiClipper {
 				var tmpSide = e1Node.side;
 				e1Node.side = e2Node.side;
 				e2Node.side = tmpSide;
-			} else if ( ( e1Node.side == Side.Left  && e1Node.kind == PolyKind.Subject &&
-						  e2Node.side == Side.Right && e2Node.kind == PolyKind.Clip ) ||
-						( e1Node.side == Side.Left  && e1Node.kind == PolyKind.Clip &&
-						  e2Node.side == Side.Right && e2Node.kind == PolyKind.Subject ) )	// (LS ∩ RC) or (LC ∩ RS) → MX
-			{
-				addLocalMin ( e1Node, e2Node, isec.p );
-				e1Node.contributing = false;
-				e2Node.contributing = false;
-				e1Node.poly = null;
-				e2Node.poly = null;
-			} else if ( ( e1Node.side == Side.Left && e1Node.kind == PolyKind.Clip &&
-						  e2Node.side == Side.Left && e2Node.kind == PolyKind.Subject ) ||
-						( e1Node.side == Side.Left && e1Node.kind == PolyKind.Subject &&
-						  e2Node.side == Side.Left && e2Node.kind == PolyKind.Clip ) )		// (LC ∩ LS) or (LS ∩ LC) → LI
-			{
-				addLeft ( e2Node, isec.p );
-			} else if ( ( e1Node.side == Side.Right && e1Node.kind == PolyKind.Clip &&
-						  e2Node.side == Side.Right && e2Node.kind == PolyKind.Subject ) ||
-						( e1Node.side == Side.Right && e1Node.kind == PolyKind.Subject &&
-						  e2Node.side == Side.Right && e2Node.kind == PolyKind.Clip ) )		// (RC ∩ RS) or (RS ∩ RC) → RI
-			{
-				addRight ( e1Node, isec.p );
-			} else if ( ( e1Node.side == Side.Right && e1Node.kind == PolyKind.Subject &&
-						  e2Node.side == Side.Left  && e2Node.kind == PolyKind.Clip ) ||
-						( e1Node.side == Side.Right && e1Node.kind == PolyKind.Clip &&
-						  e2Node.side == Side.Left  && e2Node.kind == PolyKind.Subject ) )	// (RS ∩ LC) or (RC ∩ LS) → MN
-			{
-				addLocalMax ( e1Node, e2Node, isec.p );
-				e1Node.contributing = true;
-				e2Node.contributing = true;
+			} else if ( e1Node.side == Side.Left ) {
+				if ( e2Node.side == Side.Left )					// (LC ∩ LS) or (LS ∩ LC) → LI
+					addLeft ( e2Node, isec.p );
+				else /*if ( e2Node.side == Side.Right )*/ {		// (LS ∩ RC) or (LC ∩ RS) → MX
+					addLocalMin ( e1Node, e2Node, isec.p );
+					e1Node.contributing = false;
+					e2Node.contributing = false;
+					e1Node.poly = null;
+					e2Node.poly = null;
+				}
+			} else /*if ( e1Node.side == Side.Right )*/ {	
+				if ( e2Node.side == Side.Right )				// (RC ∩ RS) or (RS ∩ RC) → RI
+					addRight ( e1Node, isec.p );
+				else if ( e2Node.side == Side.Left ) {			// (RS ∩ LC) or (RC ∩ LS) → MN
+					addLocalMax ( e1Node, e2Node, isec.p );
+					e1Node.contributing = true;
+					e2Node.contributing = true;
+				}
 			}
 			
 			/* TODO: there is a theory that only adjacent nodes are subject for being swapped.
