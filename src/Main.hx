@@ -50,7 +50,7 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*// Test: poly with two contributing local maximas
+		// Test: poly with two contributing local maximas
 		var subject = [
 			new Point ( 0, 50 ),
 			new Point ( 30, 100 ),
@@ -68,7 +68,7 @@ class Main {
 		];
 		
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( subject, PolyKind.Subject );*/
+		addInputPolygon ( subject, PolyKind.Subject );
 		
 		/*// Test: simple case of one self-intersection (hourglass)
 		var subject = [
@@ -368,7 +368,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Last unknown bug with:
+		/*// Last unknown bug with:
 		// var dAngle = 1;
 		// break on angle >= 21
 		
@@ -421,7 +421,7 @@ class Main {
 			}
 			
 			angle += dAngle;
-		}
+		}*/
 		
 		clipper = new VattiClipper ();
 		

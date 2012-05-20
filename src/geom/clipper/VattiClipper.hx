@@ -266,7 +266,15 @@ class VattiClipper {
 			
 			var dy = p1.y - p0.y;
 			var dx = p1.x - p0.x;
+			var k:Float = 0;
 			var edge:Edge;
+			
+			if ( dy != 0 ) {
+				k = dx / dy;
+				
+				if ( !Math.isFinite ( k ) )
+					dy = 0;
+			}
 			
 			if ( dy == 0 ) {
 				if ( prevDy > 0 )
@@ -283,9 +291,9 @@ class VattiClipper {
 				
 				edge.isHorizontal = true;
 			} else if ( dy > 0 )
-				edge = new Edge ( p1.x, p0.y, dx / dy );
+				edge = new Edge ( p1.x, p0.y, k );
 			else
-				edge = new Edge ( p0.x, p1.y, dx / dy );
+				edge = new Edge ( p0.x, p1.y, k );
 			
 			if ( prevEdge != null ) {
 				lastJointIsLocalMimima = false;
