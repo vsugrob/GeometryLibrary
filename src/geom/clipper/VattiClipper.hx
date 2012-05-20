@@ -223,7 +223,7 @@ class VattiClipper {
 		/* TODO: there is a theory that only adjacent nodes are subject for being swapped.
 		 * Proove it, change source accordingly and you will get speedup in swapping */
 		// Swap e1 and e2 position in AEL
-		ActiveEdge.swap ( e1Node, e2Node );
+		ActiveEdge.swapAdjacent ( e1Node, e2Node );
 		
 		if ( e1Node.prev == null )
 			ael = e1Node;
@@ -931,7 +931,7 @@ class VattiClipper {
 			/* TODO: there is a theory that only adjacent nodes are subject for being swapped.
 			 * Proove it, change source accordingly and you will get speedup in swapping */
 			// Swap e1Node and e2Node position in AEL
-			ActiveEdge.swapAdjacent ( isec.e1Node, isec.e2Node );
+			ActiveEdge.swapAdjacent ( e1Node, e2Node );
 			
 			if ( isec.e1Node.prev == null )
 				ael = isec.e1Node;
