@@ -373,7 +373,7 @@ class Main {
 		// break on angle >= 21
 		
 		var angle = 0.0;
-		var dAngle = 1;
+		var dAngle = 2;
 		
 		while ( angle < 45 ) {
 			// Test: coincident edges of different kind

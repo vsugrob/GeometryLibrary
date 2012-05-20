@@ -152,10 +152,18 @@ class VattiClipper {
 	}
 	
 	private function processIntersectionListStep ():Bool {
-		var isec = il;
-		
-		if ( isec == null )
+		if ( il == null )
 			return	false;
+		
+		var isec = il;
+		var prevIsec:Intersection = null;
+		
+		if ( !ActiveEdge.areAdjacent ( isec.e1Node, isec.e2Node ) ) {
+			do {
+				prevIsec = isec;
+				isec = isec.next;
+			} while ( !ActiveEdge.areAdjacent ( isec.e1Node, isec.e2Node ) );
+		}
 		
 		// e1 precedes e2 in AEL
 		var e1Node = isec.e1Node;
@@ -244,12 +252,14 @@ class VattiClipper {
 		e1Node.contributing = e2Node.contributing;
 		e2Node.contributing = tmpContrib;
 		
-		isec = isec.next;
-		il = il.next;
+		if ( prevIsec == null )
+			il = il.next;
+		else
+			prevIsec.next = isec.next;
 		
 		trace ( msg );
 		
-		return	isec != null;
+		return	il != null;
 	}
 	// </clipStep>
 	
@@ -878,9 +888,17 @@ class VattiClipper {
 	}
 	
 	private function processIntersectionList ():Void {
-		var isec = il;
-		
-		while ( isec != null ) {
+		while ( il != null ) {
+			var isec = il;
+			var prevIsec:Intersection = null;
+			
+			if ( !ActiveEdge.areAdjacent ( isec.e1Node, isec.e2Node ) ) {
+				do {
+					prevIsec = isec;
+					isec = isec.next;
+				} while ( !ActiveEdge.areAdjacent ( isec.e1Node, isec.e2Node ) );
+			}
+			
 			// e1Node precedes e2Node in AEL
 			var e1Node = isec.e1Node;
 			var e2Node = isec.e2Node;
@@ -938,7 +956,7 @@ class VattiClipper {
 			/* TODO: there is a theory that only adjacent nodes are subject for being swapped.
 			 * Proove it, change source accordingly and you will get speedup in swapping */
 			// Swap e1Node and e2Node position in AEL
-			ActiveEdge.swap ( isec.e1Node, isec.e2Node );
+			ActiveEdge.swapAdjacent ( isec.e1Node, isec.e2Node );
 			
 			if ( isec.e1Node.prev == null )
 				ael = isec.e1Node;
@@ -954,7 +972,10 @@ class VattiClipper {
 			e1Node.contributing = e2Node.contributing;
 			e2Node.contributing = tmpContrib;
 			
-			isec = isec.next;
+			if ( prevIsec == null )
+				il = il.next;
+			else
+				prevIsec.next = isec.next;
 		}
 	}
 	
