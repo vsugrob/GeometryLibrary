@@ -266,7 +266,6 @@ class VattiClipper {
 			
 			var dy = p1.y - p0.y;
 			var dx = p1.x - p0.x;
-			// NOTE: what to do when dx and dy both equals to zero?
 			var k:Float = 0;
 			var edge:Edge;
 			
@@ -274,10 +273,17 @@ class VattiClipper {
 				k = dx / dy;
 				
 				if ( !Math.isFinite ( k ) ) {
-					dy = 0;
-					// IMPORTANT: p0.y and p1.y are not equal! it is possible that this "horizontal"
-					// edge intersect something unexpected!
+					if ( dx == 0 ) {	// Skip zero-length edge
+						continue;
+					} else {
+						dy = 0;
+						
+						// p0.y and p1.y slightly differs, fix it.
+						p1 = new Point ( p1.x, p0.y );
+					}
 				}
+			} else if ( dx == 0 /*&& dy == 0*/ ) {	// Skip zero-length edge
+				continue;
 			}
 			
 			if ( dy == 0 ) {
@@ -486,11 +492,11 @@ class VattiClipper {
 				cmp = edge1.dx < edge2.dx;
 				// add edge2 to HEL
 			} else
-				cmp = edge1.dx < 0;
+				cmp = edge1.dx < 0;	// edge1.dx can't be 0
 			
 			// add edge1 to HEL
 		} else if ( edge2.isHorizontal ) {
-			cmp = edge2.dx >= 0;
+			cmp = edge2.dx > 0;		// edge2.dx can't be 0
 			// add edge2 to HEL
 		} else
 			cmp = edge1.dx > edge2.dx;

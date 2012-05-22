@@ -368,7 +368,33 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		var angle = 0.0;
+		// Test: several zero-length edges
+		var subject = [
+			new Point ( 300, 100 ),
+			new Point ( 300, 100 ),
+			new Point ( 500, 300 ),
+			new Point ( 500, 300 ),
+			new Point ( 300, 500 ),
+			new Point ( 300, 500 ),
+			new Point ( 100, 300 ),
+			new Point ( 100, 300 ),
+			new Point ( 100, 300 ),
+		];
+		
+		var clip = [
+			new Point ( 300, 300 ),
+			new Point ( 300, 300 ),
+			new Point ( 300, 0 ),
+			new Point ( 300, 0 ),
+			new Point ( 300, 0 ),
+			new Point ( 600, 100 ),
+			new Point ( 600, 100 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );
+		
+		/*var angle = 0.0;
 		var dAngle = 1;
 		
 		while ( angle < 45 ) {
@@ -417,7 +443,7 @@ class Main {
 			}
 			
 			angle += dAngle;
-		}
+		}*/
 		
 		/*// Test: poly with two horizontal edges facing same direction
 		var subject = [
