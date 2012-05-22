@@ -50,7 +50,7 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		// Test: poly with two contributing local maximas
+		/*// Test: poly with two contributing local maximas
 		var subject = [
 			new Point ( 0, 50 ),
 			new Point ( 30, 100 ),
@@ -68,7 +68,7 @@ class Main {
 		];
 		
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( subject, PolyKind.Subject );*/
 		
 		/*// Test: simple case of one self-intersection (hourglass)
 		var subject = [
@@ -368,12 +368,8 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Last unknown bug with:
-		// var dAngle = 1;
-		// break on angle >= 21
-		
 		var angle = 0.0;
-		var dAngle = 2;
+		var dAngle = 1;
 		
 		while ( angle < 45 ) {
 			// Test: coincident edges of different kind
@@ -421,12 +417,36 @@ class Main {
 			}
 			
 			angle += dAngle;
-		}*/
+		}
+		
+		/*// Test: poly with two horizontal edges facing same direction
+		var subject = [
+			new Point ( 100, 100 ),
+			new Point ( 200, 100 ),
+			new Point ( 300, 0 ),
+			new Point ( 200, 50 ),
+			new Point ( 150, 100 )
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
 		
 		clipper = new VattiClipper ();
 		
 		for ( inputPoly in inputPolys )
 			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+		
+		clipper.drawLml ( debugSprite.graphics );
+		
+		return;*/
+		
+		
+		clipper = new VattiClipper ();
+		
+		for ( inputPoly in inputPolys )
+			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+		
+		clipper.drawLml ( debugSprite.graphics );
+		
 		
 		//clipper.drawLml ( debugSprite.graphics );
 		//clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );

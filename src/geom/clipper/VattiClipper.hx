@@ -172,7 +172,7 @@ class VattiClipper {
 		msg += e1Node.side + " " + e1Node.kind + " x " + e2Node.side + " " + e2Node.kind + "\n";
 		
 		if ( !ActiveEdge.areAdjacent ( e1Node, e2Node ) )
-			msg += "ATTEMPT TO SWAP NON-ADJACENT NODES\n";
+			throw "ATTEMPT TO SWAP NON-ADJACENT NODES";
 		
 		if ( e1Node.kind == e2Node.kind ) {
 			msg += "Like edge intersection";
@@ -266,14 +266,18 @@ class VattiClipper {
 			
 			var dy = p1.y - p0.y;
 			var dx = p1.x - p0.x;
+			// NOTE: what to do when dx and dy both equals to zero?
 			var k:Float = 0;
 			var edge:Edge;
 			
 			if ( dy != 0 ) {
 				k = dx / dy;
 				
-				if ( !Math.isFinite ( k ) )
+				if ( !Math.isFinite ( k ) ) {
 					dy = 0;
+					// IMPORTANT: p0.y and p1.y are not equal! it is possible that this "horizontal"
+					// edge intersect something unexpected!
+				}
 			}
 			
 			if ( dy == 0 ) {
@@ -457,132 +461,83 @@ class VattiClipper {
 	 * @param	kind
 	 */
 	private function addEdgesToAel ( edge1:Edge, edge2:Edge, yb:Float, kind:PolyKind ):Void {
-		var p:Point = new Point ( edge1.bottomX, yb );
-		var likeEdgesEven = numLeftAelNodesEven ( p.x, kind );	// Number of edges in ael to the left of
-																// local maxima (of the same kind) is even or odd?
-		var cmp:Bool;					// Edges x-coordinate comparison
-		
-		// Remember that both edges can't be horizontal simultaneously
-		if ( edge1.isHorizontal ) {
-			cmp = edge1.successor.bottomX < edge2.bottomX;
-			edge1 = edge1.successor;
-		} else if ( edge2.isHorizontal ) {
-			cmp = edge1.bottomX > edge2.successor.bottomX;
-			edge2 = edge2.successor;
-		} else {
-			cmp = edge1.dx > edge2.dx;
-		}
-		
-		var e1Side:Side, e2Side:Side;
-		
-		if ( cmp == likeEdgesEven ) {
-			e1Side = Side.Left;
-			e2Side = Side.Right;
-		} else {
-			e1Side = Side.Right;
-			e2Side = Side.Left;
-		}
-		
-		if ( !cmp ) {
-			var tmpEdge = edge1;
-			edge1 = edge2;
-			edge2 = tmpEdge;
-			
-			var tmpSide = e1Side;
-			e1Side = e2Side;
-			e2Side = tmpSide;
-		}
-		
-		var aelNode1:ActiveEdge, aelNode2:ActiveEdge;
-		
-		if ( ael == null )
-			aelNode1 = ael = new ActiveEdge ( edge1, kind );
-		else
-			aelNode1 = addActiveEdge ( ael, edge1, kind );
-		
-		aelNode2 = addActiveEdge ( aelNode1, edge2, kind );
-		
-		aelNode1.side = e1Side;
-		aelNode2.side = e2Side;
-		aelNode1.bottomXIntercept = aelNode1.edge.bottomX;
-		aelNode2.bottomXIntercept = aelNode2.edge.bottomX;
-		aelNode1.bottomY = yb;
-		aelNode2.bottomY = yb;
-		
-		initEdgeContributingStatus ( aelNode1 );
-		initEdgeContributingStatus ( aelNode2 );
-		
-		if ( aelNode1.contributing && aelNode2.contributing )
-			addLocalMax ( aelNode1, aelNode2, p );
-	}
-	
-	private inline function initEdgeContributingStatus ( aelNode:ActiveEdge ):Void {
-		var i = 0;
-		var kind:PolyKind = aelNode.kind;
-		var startNode = aelNode;
-		aelNode = aelNode.prev;
-		
-		while ( aelNode != null ) {
-			if ( aelNode.kind != kind )
-				i++;
-			
-			aelNode = aelNode.prev;
-		}
-		
-		startNode.contributing = i % 2 == 1;
-	}
-	
-	private inline function numLeftAelNodesEven ( x:Float, kind:PolyKind ):Bool {
-		var i:Int = 0;
+		// Calculate parity
+		var numLikeEdges:Int = 0;
+		var numUnlikeEdges:Int = 0;
 		var aelNode = ael;
+		var prevAelNode:ActiveEdge = null;
 		
-		while ( aelNode != null && aelNode.bottomXIntercept < x ) {
+		while ( aelNode != null && aelNode.bottomXIntercept < edge1.bottomX ) {
 			if ( aelNode.kind == kind )
-				i++;
+				numLikeEdges++;
+			else
+				numUnlikeEdges++;
 			
+			prevAelNode = aelNode;
 			aelNode = aelNode.next;
 		}
 		
-		return	i % 2 == 0;
-	}
-	
-	/**
-	 * Insert an edge into active edge list after aelNode maintaining x-order.
-	 * @param	node	Origin node.
-	 * @param	edge	An edge being inserted.
-	 * @param	kind	PolyKind of the edge.
-	 * @return	Newly generated node that holds reference to an edge.
-	 */
-	private inline function addActiveEdge ( aelNode:ActiveEdge, edge:Edge, kind:PolyKind ):ActiveEdge {
-		var newNode:ActiveEdge = null;
+		var likeEdgesEven = numLikeEdges % 2 == 0;
+		var contribVertex = numUnlikeEdges % 2 == 1;
+		var cmp:Bool;	// Whether edge1 directed to the left relative to edge2?
 		
-		if ( edge.bottomX < aelNode.bottomXIntercept ) {
-			aelNode.insertPrev ( edge, kind );
-			newNode = aelNode.prev;
-		} else {
-			while ( aelNode.next != null ) {
-				if ( edge.bottomX < aelNode.next.bottomXIntercept ) {
-					aelNode.next.insertPrev ( edge, kind );
-					newNode = aelNode.next;
-					
-					break;
-				}
-				
-				aelNode = aelNode.next;
-			}
+		if ( edge1.isHorizontal ) {
+			if ( edge2.isHorizontal ) {
+				cmp = edge1.dx < edge2.dx;
+				// add edge2 to HEL
+			} else
+				cmp = edge1.dx < 0;
 			
-			if ( newNode == null ) {
-				aelNode.insertNext ( edge, kind );
-				newNode = aelNode.next;
-			}
+			// add edge1 to HEL
+		} else if ( edge2.isHorizontal ) {
+			cmp = edge2.dx >= 0;
+			// add edge2 to HEL
+		} else
+			cmp = edge1.dx > edge2.dx;
+		
+		var aelNode1 = new ActiveEdge ( edge1, kind );
+		var aelNode2 = new ActiveEdge ( edge2, kind );
+		
+		aelNode1.bottomXIntercept = edge1.bottomX;
+		aelNode2.bottomXIntercept = edge1.bottomX;
+		aelNode1.bottomY = yb;
+		aelNode2.bottomY = yb;
+		aelNode1.contributing = contribVertex;
+		aelNode2.contributing = contribVertex;
+		
+		if ( cmp == likeEdgesEven ) {
+			aelNode1.side = Side.Left;
+			aelNode2.side = Side.Right;
+		} else {
+			aelNode1.side = Side.Right;
+			aelNode2.side = Side.Left;
 		}
 		
-		newNode.kind = kind;
+		if ( !cmp ) {	// edge2 is to the left of the edge1
+			var tmpNode = aelNode1;
+			aelNode1 = aelNode2;
+			aelNode2 = tmpNode;
+		}
 		
-		if ( newNode.next == ael )
-			ael = aelNode;
+		// Insert edges into Active Edge List
+		if ( prevAelNode != null ) {
+			prevAelNode.next = aelNode1;
+			aelNode1.prev = prevAelNode;
+		}
 		
-		return	newNode;
+		aelNode1.next = aelNode2;
+		aelNode2.prev = aelNode1;
+		
+		if ( aelNode != null ) {
+			aelNode2.next = aelNode;
+			aelNode.prev = aelNode2;
+		}
+		
+		if ( ael == null || ael.prev != null )
+			ael = aelNode1;
+		
+		if ( contribVertex )
+			addLocalMax ( aelNode1, aelNode2, new Point ( edge1.bottomX, yb ) );
 	}
 	
 	private function addLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point ):Void {
