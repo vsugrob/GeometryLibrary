@@ -24,6 +24,11 @@ class VattiClipper {
 	 */
 	private var ael:ActiveEdge;
 	/**
+	 * Pointer to first node of the doubly-linked list of horizontal edges
+	 * lying at the bottom of current scanbeam.
+	 */
+	private var hel:DoublyList <ActiveEdge>;
+	/**
 	 * List of polygons being formed during clipping operation.
 	 */
 	private var outPolys:List <ChainedPolygon>;
@@ -70,6 +75,12 @@ class VattiClipper {
 		
 		do {
 			addNewBoundPairs ( yb );	// Modifies ael
+			
+			while ( hel != null ) {
+				buildHorizontalIntersectionList ( yb );
+				processIntersectionList ();
+				processEdgesInAelHorizontal ();
+			}
 			
 			var yt = popScanbeam ();	// Top of the current scan beam
 			
@@ -485,31 +496,34 @@ class VattiClipper {
 		
 		var likeEdgesEven = numLikeEdges % 2 == 0;
 		var contribVertex = numUnlikeEdges % 2 == 1;
-		var cmp:Bool;	// Whether edge1 directed to the left relative to edge2?
-		
-		if ( edge1.isHorizontal ) {
-			if ( edge2.isHorizontal ) {
-				cmp = edge1.dx < edge2.dx;
-				// add edge2 to HEL
-			} else
-				cmp = edge1.dx < 0;	// edge1.dx can't be 0
-			
-			// add edge1 to HEL
-		} else if ( edge2.isHorizontal ) {
-			cmp = edge2.dx > 0;		// edge2.dx can't be 0
-			// add edge2 to HEL
-		} else
-			cmp = edge1.dx > edge2.dx;
 		
 		var aelNode1 = new ActiveEdge ( edge1, kind );
 		var aelNode2 = new ActiveEdge ( edge2, kind );
 		
 		aelNode1.bottomXIntercept = edge1.bottomX;
 		aelNode2.bottomXIntercept = edge1.bottomX;
+		aelNode1.topXIntercept = edge1.bottomX;	// Top-x intercept necessary for buildHorizontalIntersectionList ().
+		aelNode2.topXIntercept = edge1.bottomX;
 		aelNode1.bottomY = yb;
 		aelNode2.bottomY = yb;
 		aelNode1.contributing = contribVertex;
 		aelNode2.contributing = contribVertex;
+		
+		var cmp:Bool;	// Whether edge1 directed to the left relative to edge2?
+		
+		if ( edge1.isHorizontal ) {
+			if ( edge2.isHorizontal ) {
+				cmp = edge1.dx < edge2.dx;
+				addHorizontalEdge ( aelNode2 );
+			} else
+				cmp = edge1.dx < 0;	// edge1.dx can't be 0
+			
+			addHorizontalEdge ( aelNode1 );
+		} else if ( edge2.isHorizontal ) {
+			cmp = edge2.dx > 0;		// edge2.dx can't be 0
+			addHorizontalEdge ( aelNode2 );
+		} else
+			cmp = edge1.dx > edge2.dx;
 		
 		if ( cmp == likeEdgesEven ) {
 			aelNode1.side = Side.Left;
@@ -546,7 +560,14 @@ class VattiClipper {
 			addLocalMax ( aelNode1, aelNode2, new Point ( edge1.bottomX, yb ) );
 	}
 	
-	private function addLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point ):Void {
+	private inline function addHorizontalEdge ( eNode:ActiveEdge ):Void {
+		if ( hel == null )
+			hel = new DoublyList <ActiveEdge> ( eNode );
+		else
+			hel.insertNext ( eNode );
+	}
+	
+	private inline function addLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point ):Void {
 		var pNode:DoublyList <Point> = new DoublyList <Point> ( p );
 		var poly:ChainedPolygon = new ChainedPolygon ( pNode, pNode );
 		
@@ -555,7 +576,7 @@ class VattiClipper {
 	}
 	
 	/**
-	 * Assumption: Polygons have no horizontal edges.
+	 * Active Edge List must have no horizontal edges.
 	 * @param	yb	Bottom of the scanbeam.
 	 * @param	yt	Top of the scanbeam.
 	 */
@@ -570,18 +591,27 @@ class VattiClipper {
 			
 			if ( edge.topY == yt ) {	// Edge terminates at the top of the scanbeam
 				if ( edge.successor.isLocalMinima () ) {
-					var nextAelNode:ActiveEdge;
+					var lMin = cast ( edge.successor, LocalMinima );
+					var otherEdge:Edge = edge == lMin.edge2 ? lMin.edge1 : lMin.edge2;
 					
-					// Debug assert necessary until numerical errors in algo present:
-					if ( aelNode.next.edge.topY != yt ) {
-						throw 'Attempted to addLocalMin with two disjoint edges.';
+					if ( aelNode.next == null || aelNode.next.edge != otherEdge ) {
+						// Then other edge is horizontal while current edge is not.
+						// We must delay processing of this edge until processing of horizontal edges.
+						
+						if ( edge.isHorizontal || !otherEdge.isHorizontal )
+							throw "Assertion failed";
+						
+						aelNode.bottomXIntercept = aelNode.topXIntercept;	// Make it suitable for horizontal processing.
+						aelNode = aelNode.next;
+						
+						continue;
 					}
 					
 					// Next edge should be also contributing and its topY should be equal to yt
 					if ( aelNode.contributing )
 						addLocalMin ( aelNode, aelNode.next, new Point ( edge.successor.bottomX, yt ) );
 					
-					nextAelNode = aelNode.next.next;
+					var nextAelNode:ActiveEdge = aelNode.next.next;
 					aelNode.removeNext ();
 					aelNode.removeSelf ();
 					
@@ -604,12 +634,83 @@ class VattiClipper {
 					aelNode.bottomY = yt;
 					
 					addScanbeam ( edge.successor.topY );
+					
+					if ( aelNode.edge.isHorizontal )
+						addHorizontalEdge ( aelNode );
 				}
 			} else
 				aelNode.bottomXIntercept = aelNode.topXIntercept;
 			
 			aelNode = aelNode.next;
 		} while ( aelNode != null );
+	}
+	
+	/**
+	 * Processes horizontal edges.
+	 */
+	private function processEdgesInAelHorizontal ():Void {
+		var helNode = hel;
+		
+		do {
+			var aelNode = helNode.value;
+			var edge = aelNode.edge;
+			var removeHelNode = false;
+			
+			if ( edge.successor.isLocalMinima () ) {
+				var lMin = cast ( edge.successor, LocalMinima );
+				var otherEdge:Edge = edge == lMin.edge2 ? lMin.edge1 : lMin.edge2;
+				var aelNode1:ActiveEdge, aelNode2:ActiveEdge;
+				
+				if ( aelNode.next != null && aelNode.next.edge == otherEdge ) {
+					aelNode1 = aelNode;
+					aelNode2 = aelNode.next;
+				} else {
+					aelNode1 = aelNode.prev;
+					aelNode2 = aelNode;
+				}
+				
+				var nextAelNode:ActiveEdge = aelNode2.next;
+				
+				// Next edge should be also contributing and its topY should be equal to yt
+				if ( aelNode1.contributing )
+					addLocalMin ( aelNode1, aelNode2, new Point ( edge.successor.bottomX, edge.topY ) );
+				
+				aelNode1.removeSelf ();
+				aelNode2.removeSelf ();
+				
+				if ( ael == aelNode1 )
+					ael = nextAelNode;
+				
+				removeHelNode = true;
+			} else {
+				if ( aelNode.contributing ) {
+					if ( aelNode.side == Side.Left )	// Left intermediate
+						addLeft ( aelNode, new Point ( edge.successor.bottomX, edge.topY ) );
+					else 								// Right intermediate
+						addRight ( aelNode, new Point ( edge.successor.bottomX, edge.topY ) );
+				}
+				
+				aelNode.edge = edge.successor;
+				aelNode.bottomXIntercept = aelNode.edge.bottomX;
+				
+				if ( !edge.successor.isHorizontal ) {
+					addScanbeam ( edge.successor.topY );
+					removeHelNode = true;
+				}
+			}
+			
+			if ( removeHelNode ) {
+				var nextHelNode = helNode.next;
+				
+				helNode.removeSelf ();
+				
+				if ( hel == helNode )
+					hel = nextHelNode;
+				
+				helNode = nextHelNode;
+			} else
+				helNode = helNode.next;
+		} while ( helNode != null );
 	}
 	
 	private inline function addLeft ( aelNode:ActiveEdge, p:Point ):Void {
@@ -742,8 +843,82 @@ class VattiClipper {
 			e1Node = e1Node.next;
 		}
 		
-		// Process intersections lying exactly in local minimas which previous
-		// algorithm wasn't able to detect.
+		buildApexIntersections ( selLeft, selRight, yt );
+	}
+	
+	private function buildHorizontalIntersectionList ( yb:Float ):Void {
+		il = null; // Initialize IL to empty;
+		ilLast = null;
+		
+		var helNode = hel;
+		
+		do {
+			helNode.value.topXIntercept = helNode.value.edge.successor.bottomX;
+			helNode = helNode.next;
+		} while ( helNode != null );
+		
+		// Set Sorted Edge List to first node in Active Edge List
+		var selLeft = new DoublyList <ActiveEdge> ( ael );
+		var selRight = selLeft;
+		
+		var e1Node = ael.next;
+		
+		while ( e1Node != null ) {
+			/* Starting with the rightmost node of SEL we shall now move from right
+			 * to left through the nodes of SEL checking for an intersection with e1.
+			 * Let e2 denote the rightmost edge of SEL. */
+			var e2Node = selRight;
+			
+			while ( e2Node != null && e1Node.topXIntercept < e2Node.value.topXIntercept ) {
+				var p:Point;
+				
+				if ( e1Node.edge.isHorizontal ) {
+					if ( e2Node.value.edge.isHorizontal )
+						p = intersectionPointOfHorizontal ( e1Node, e2Node.value, yb );
+					else
+						p = new Point ( e2Node.value.bottomXIntercept, yb );
+				} else /*if ( e2Node.value.edge.isHorizontal )*/
+					p = new Point ( e1Node.bottomXIntercept, yb );
+				
+				// Both e1 and e2 can't be non-horizontal sumultaneously due to equality
+				// of their top and bottom x-intercepts. So they will never be reordered and
+				// therefore intersected by each other.
+				
+				var isec = new Intersection ( e2Node.value, e1Node, p, 0 );	// e2 is to the left of the e1 in the ael
+				addIntersectionLast ( isec );
+				
+				// Update e2 to denote edge to its left in SEL
+				e2Node = e2Node.prev;
+			}
+			
+			// Now insert e1 into SEL at the point where we quit the while loop
+			if ( e2Node != null ) {
+				// Insert e1 to the right of e2 in SEL
+				if ( e2Node.next == null ) {
+					e2Node.insertNext ( e1Node );
+					selRight = e2Node.next;
+				} else
+					e2Node.insertNext ( e1Node );
+			} else {
+				// Insert e1 at the left end of SEL
+				selLeft.insertPrev ( e1Node );
+				selLeft = selLeft.prev;
+			}
+			
+			e1Node = e1Node.next;
+		}
+		
+		buildApexIntersections ( selLeft, selRight, yb );
+	}
+	
+	/**
+	 * Processes intersections lying exactly in local minimas which wasn't able to detect
+	 * using standard algorithm such as buildIntersectionList ().
+	 * @param	selLeft	First element of Sorted Edge List.
+	 * @param	selRight	Last element of Sorted Edge List.
+	 * @param	yt	Y-coordinate of top of the scanbeam.
+	 */
+	private function buildApexIntersections ( selLeft:DoublyList <ActiveEdge>, selRight:DoublyList <ActiveEdge>, yt:Float ):Void {
 		do {
 			if ( selLeft.value.edge.topY == yt && selLeft.value.edge.successor.isLocalMinima () ) {
 				var lMin = cast ( selLeft.value.edge.successor, LocalMinima );
@@ -752,7 +927,19 @@ class VattiClipper {
 				// Find selNode pointing to other edge ending at local minima
 				selRight = selLeft.next;
 				
-				while ( selRight.value.edge != otherEdge ) { selRight = selRight.next; }
+				while ( selRight != null && selRight.value.edge != otherEdge ) { selRight = selRight.next; }
+				
+				if ( selRight == null ) {
+					// Then other edge ending at local minima is horizontal while selLeft is not.
+					// We must delay its processing until processing of horizontal edges.
+					
+					if ( selLeft.value.edge.isHorizontal || !otherEdge.isHorizontal )
+						throw "Assertion failed";
+					
+					selLeft = selLeft.next;
+					
+					continue;
+				}
 				
 				var p = new Point ( lMin.bottomX, lMin.topY );
 				
@@ -830,7 +1017,9 @@ class VattiClipper {
 		 * dy * dxb / ( dxb + dxt ) == hb
 		 * 
 		 * NOTE on why k = dxb / dxt, not dxt / dxb:
-		 * dxb can be zero while dxt can't.*/
+		 * dxb can be zero while (mathematically) dxt can't.
+		 * Sometimes, due to floating-point cancellation, dxt can be zero too,
+		 * however dxb / dxt will be positive infinity and this is ok.*/
 		var dxt = Math.abs ( e1Node.topXIntercept - e2Node.topXIntercept );
 		var dxb = Math.abs ( e1Node.bottomXIntercept - e2Node.bottomXIntercept );
 		var k = dxb / dxt;
@@ -839,6 +1028,37 @@ class VattiClipper {
 		var p = new Point ( topX ( e1Node, yIsec ), yIsec );
 		
 		return	new Intersection ( e1Node, e2Node, p, k );
+	}
+	
+	/**
+	 * Finds intersection point of two horizontal edges.
+	 * This function reimagines edges as non-horizontal edges with their bottom
+	 * ends having x-coordinate in bottomXIntercept and top ends having
+	 * x-coordinate in topXIntercept.
+	 * @param	e1	First edge known to intersect other edge.
+	 * @param	e2	Second edge.
+	 * @param	yb	Bottom of the scanbeam.
+	 * @return	Intersection point between two edges.
+	 */
+	private static inline function intersectionPointOfHorizontal ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float ):Point {
+		/* Let a, b, c, d be e1Node.bottomXIntercept, e2Node.bottomXIntercept,
+		 * e2Node.topXIntercept and e1Node.topXIntercept respectively.
+		 * Let x be unknown x-ccordinate of intersection.
+		 * 
+		 * Solve system of equations:
+		 * { ( b - a ) / ( d - c ) == k,
+		 *   ( b - x ) / ( x - c ) == k } <=>
+		 * ( b - a ) / ( d - c ) == ( b - x ) / ( x - c ) => ( if x - c != 0 )
+		 * ( b - a ) * ( x - c ) == ( b - x ) * ( d - c ) <=>
+		 * bx - bc - ax + ac == bd - bc - dx + cx <=>
+		 * bx - ax + dx - cx == bd - bc + bc - ac <=>
+		 * x * ( b - a + d - c ) == bd - ac => ( if b - a + d - c != 0 )
+		 * x == ( bd - ac ) / ( b - a + d - c )
+		 */
+		var x = ( e2Node.bottomXIntercept * e1Node.topXIntercept - e1Node.bottomXIntercept * e2Node.topXIntercept ) /
+			( e2Node.bottomXIntercept - e1Node.bottomXIntercept + e1Node.topXIntercept - e2Node.topXIntercept );
+		
+		return	new Point ( x, yb );
 	}
 	
 	private function processIntersectionList ():Void {

@@ -368,7 +368,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: several zero-length edges
+		/*// Test: several zero-length edges
 		var subject = [
 			new Point ( 300, 100 ),
 			new Point ( 300, 100 ),
@@ -389,6 +389,43 @@ class Main {
 			new Point ( 300, 0 ),
 			new Point ( 600, 100 ),
 			new Point ( 600, 100 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: one horizontal edge.
+		var subject = [
+			new Point ( 300, 500 ),
+			new Point ( 400, 400 ),
+			new Point ( 500, 400 ),
+			new Point ( 200, 100 ),
+		];
+		
+		var clip = [
+			new Point ( 300, 0 ),
+			new Point ( 400, 600 ),
+			new Point ( 500, 200 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		// Test: several coincident horizontal edges.
+		var subject = [
+			new Point ( 300, 500 ),
+			new Point ( 400, 400 ),
+			new Point ( 500, 400 ),
+			new Point ( 200, 100 ),
+		];
+		
+		var clip = [
+			new Point ( 300, 0 ),
+			new Point ( 400, 600 ),
+			new Point ( 700, 400 ),
+			new Point ( 450, 400 ),
+			new Point ( 500, 400 ),
+			new Point ( 390, 400 ),
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
@@ -471,7 +508,16 @@ class Main {
 		for ( inputPoly in inputPolys )
 			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 		
-		clipper.drawLml ( debugSprite.graphics );
+		clipper.clip ();
+		drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
+		clipper.drawOutPolys ( debugSprite.graphics );
+		
+		return;
+		
+		clipper = new VattiClipper ();
+		
+		for ( inputPoly in inputPolys )
+			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 		
 		
 		//clipper.drawLml ( debugSprite.graphics );
