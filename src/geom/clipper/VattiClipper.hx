@@ -381,8 +381,9 @@ class VattiClipper {
 							reverseHorizontalEdge ( firstEdge );	// [Case 4 subcase]
 						else {
 							// Pure local minimum, [Case 4]
-							addLocalMinima ( lastEdge, firstEdge, p0.x, p0.y );
 						}
+						
+						addLocalMinima ( lastEdge, firstEdge, p0.x, p0.y );
 					}
 				} else {
 					if ( firstJointIsLocalMimima ) {
@@ -596,12 +597,11 @@ class VattiClipper {
 					
 					if ( aelNode.next == null || aelNode.next.edge != otherEdge ) {
 						// Then other edge is horizontal while current edge is not.
-						// We must delay processing of this edge until processing of horizontal edges.
+						// We must defer processing of this edge until processing of horizontal edges.
 						
 						if ( edge.isHorizontal || !otherEdge.isHorizontal )
 							throw "Assertion failed";
 						
-						aelNode.bottomXIntercept = aelNode.topXIntercept;	// Make it suitable for horizontal processing.
 						aelNode = aelNode.next;
 						
 						continue;
@@ -876,9 +876,9 @@ class VattiClipper {
 					if ( e2Node.value.edge.isHorizontal )
 						p = intersectionPointOfHorizontal ( e1Node, e2Node.value, yb );
 					else
-						p = new Point ( e2Node.value.bottomXIntercept, yb );
+						p = new Point ( e2Node.value.topXIntercept, yb );
 				} else /*if ( e2Node.value.edge.isHorizontal )*/
-					p = new Point ( e1Node.bottomXIntercept, yb );
+					p = new Point ( e1Node.topXIntercept, yb );
 				
 				// Both e1 and e2 can't be non-horizontal sumultaneously due to equality
 				// of their top and bottom x-intercepts. So they will never be reordered and
@@ -931,7 +931,7 @@ class VattiClipper {
 				
 				if ( selRight == null ) {
 					// Then other edge ending at local minima is horizontal while selLeft is not.
-					// We must delay its processing until processing of horizontal edges.
+					// We must defer its processing until processing of horizontal edges.
 					
 					if ( selLeft.value.edge.isHorizontal || !otherEdge.isHorizontal )
 						throw "Assertion failed";

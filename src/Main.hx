@@ -411,7 +411,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: several coincident horizontal edges.
+		/*// Test: several coincident horizontal edges.
 		var subject = [
 			new Point ( 300, 500 ),
 			new Point ( 400, 400 ),
@@ -426,6 +426,59 @@ class Main {
 			new Point ( 450, 400 ),
 			new Point ( 500, 400 ),
 			new Point ( 390, 400 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: horizontal edge pairing to terminating edge
+		var subject = [
+			new Point ( 200, 200 ),
+			new Point ( 400, 200 ),
+			new Point ( 400, 400 ),
+			new Point ( 200, 400 ),
+		];
+		
+		var clip = [
+			new Point ( 300, 0 ),
+			new Point ( 150, 500 ),
+			new Point ( 600, 150 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: two coincident squares
+		var subject = [
+			new Point ( 200, 200 ),
+			new Point ( 400, 200 ),
+			new Point ( 400, 400 ),
+			new Point ( 200, 400 ),
+		];
+		
+		var clip = [
+			new Point ( 200, 200 ),
+			new Point ( 400, 200 ),
+			new Point ( 400, 400 ),
+			new Point ( 200, 400 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		// Test: two shifted squares
+		var subject = [
+			new Point ( 200, 200 ),
+			new Point ( 400, 200 ),
+			new Point ( 400, 400 ),
+			new Point ( 200, 400 ),
+		];
+		
+		var clip = [
+			new Point ( 300, 200 ),
+			new Point ( 500, 200 ),
+			new Point ( 500, 400 ),
+			new Point ( 300, 400 ),
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
