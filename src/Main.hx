@@ -20,7 +20,10 @@ import geom.clipper.LocalMinima;
 import geom.clipper.PolyKind;
 import geom.clipper.Side;
 import geom.clipper.VattiClipper;
+import geom.ClosedPolygonIterator;
 import geom.DoublyList;
+import geom.TakeIterator;
+import geom.ConcatIterator;
 
 /**
  * ...
@@ -47,6 +50,46 @@ class Main {
 		panAndZoom.addEventListener ( Event.COMPLETE, function ( e:Event ):Void {
 			drawCurrentStep ( panAndZoom.zoom );
 		} );
+		
+		/*var pts = new Array <Point> ();
+		//pts.push ( new Point ( 0, 200 ) );
+		//pts.push ( new Point ( 200, 200 ) );
+		//pts.push ( new Point ( 400, 200 ) );
+		
+		//pts.push ( new Point ( 100, 300 ) );
+		//pts.push ( new Point ( 150, 320 ) );
+		//pts.push ( new Point ( 200, 320 ) );
+		//pts.push ( new Point ( 220, 370 ) );
+		
+		pts.push ( new Point ( 250, 500 ) );
+		pts.push ( new Point ( 500, 500 ) );
+		pts.push ( new Point ( 500, 100 ) );
+		pts.push ( new Point ( 100, 100 ) );
+		pts.push ( new Point ( 100, 500 ) );
+		
+		
+		var cl = new VattiClipper ();
+		cl.addPolygonNew ( pts, PolyKind.Clip );
+		
+		//pts = new Array <Point> ();
+		//pts.push ( new Point ( 300, 300 ) );
+		//pts.push ( new Point ( 400, 100 ) );
+		//pts.push ( new Point ( 200, 100 ) );
+		//pts.push ( new Point ( 300, 300 ) );	// close
+		
+		pts = new Array <Point> ();
+		pts.push ( new Point ( 0, 0 ) );
+		pts.push ( new Point ( 600, 10 ) );
+		pts.push ( new Point ( 600, 600 ) );
+		pts.push ( new Point ( 0, 610 ) );
+		pts.push ( new Point ( 0, 0 ) );	// close
+		
+		cl.addPolygon ( pts, PolyKind.Subject );
+		
+		cl.clip ();
+		cl.drawOutPolys ( debugSprite.graphics );
+		
+		return;*/
 		
 		inputPolys = new List <InputPolygon> ();
 		
@@ -466,7 +509,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: two shifted squares
+		/*// Test: two shifted squares
 		var subject = [
 			new Point ( 200, 200 ),
 			new Point ( 400, 200 ),
@@ -482,12 +525,12 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*var angle = 0.0;
-		var dAngle = 1;
+		var angle = 0.0;
+		var dAngle = 15;
 		
-		while ( angle < 45 ) {
+		while ( angle <= 45 ) {
 			// Test: coincident edges of different kind
 			var bgPoly = [
 				new Point ( 300, 0 ),
@@ -514,8 +557,16 @@ class Main {
 			rotatePoly ( bgPoly, angle * Math.PI / 180, center );
 			rotatePoly ( clip, angle * Math.PI / 180, center );
 			//inputPolys = new List <InputPolygon> ();
+			
+			//if ( angle != 22.5 ) {
+				//roundPolyCoords ( bgPoly );
+				//roundPolyCoords ( clip );
+			//}
+			
 			addInputPolygon ( bgPoly, PolyKind.Subject );
-			addInputPolygon ( clip, PolyKind.Clip );
+			
+			//if ( angle != 22.5 )
+				addInputPolygon ( clip, PolyKind.Clip );
 			
 			clipper = new VattiClipper ();
 			
@@ -524,7 +575,7 @@ class Main {
 			}
 			
 			try {
-				clipper.clip ();
+				//clipper.clip ();
 			} catch ( ex:Dynamic ) {
 				trace ( 'EXCEPTION. angle: ' + angle + ' dAngle: ' + dAngle );
 				trace ( ex );
@@ -533,7 +584,7 @@ class Main {
 			}
 			
 			angle += dAngle;
-		}*/
+		}
 		
 		/*// Test: poly with two horizontal edges facing same direction
 		var subject = [
@@ -562,7 +613,7 @@ class Main {
 			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 		
 		clipper.clip ();
-		drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
+		//drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
 		clipper.drawOutPolys ( debugSprite.graphics );
 		
 		return;
@@ -614,15 +665,6 @@ class Main {
 	}
 	
 	private static function addInputPolygon ( pts:Array <Point>, kind:PolyKind ):Void {
-		/*var n = 4;
-		var m = Math.pow ( 10, n );
-		
-		for ( p in pts ) {
-			p.x = Math.round ( p.x * m ) / m;
-			p.y = Math.round ( p.y * m ) / m;
-		}*/
-		
-		pts.push ( pts [0] );
 		inputPolys.add ( new InputPolygon ( pts, kind ) );
 	}
 	
@@ -709,6 +751,15 @@ class Main {
 			var rp = m.transformPoint ( p );
 			p.x = rp.x;
 			p.y = rp.y;
+		}
+	}
+	
+	private static function roundPolyCoords ( pts:Iterable <Point>, numDecimalPlaces:Int = 0 ):Void {
+		var mul:Float = Math.pow ( 10, numDecimalPlaces );
+		
+		for ( p in pts ) {
+			p.x = Math.round ( p.x * mul );
+			p.y = Math.round ( p.y * mul );
 		}
 	}
 	

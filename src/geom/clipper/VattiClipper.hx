@@ -2,7 +2,10 @@ package geom.clipper;
 import flash.display.Graphics;
 import flash.geom.Point;
 import geom.ChainedPolygon;
+import geom.ClosedPolygonIterator;
+import geom.ConcatIterator;
 import geom.DoublyList;
+import geom.TakeIterator;
 
 /**
  * ...
@@ -48,7 +51,7 @@ class VattiClipper {
 	
 	/**
 	 * 
-	 * @param	poly	Iterable of Point where last point coincide to first point.
+	 * @param	poly	Iterable of Point.
 	 * @param	kind	Whether this poly is one that will be clipped (PolyKind.Subject) or that which
 	 * will clip (PolyKind.Clip).
 	 */
@@ -76,10 +79,17 @@ class VattiClipper {
 		do {
 			addNewBoundPairs ( yb );	// Modifies ael
 			
-			while ( hel != null ) {
+			while ( hel != null && ael != null ) {
 				buildHorizontalIntersectionList ( yb );
 				processIntersectionList ();
 				processEdgesInAelHorizontal ();
+			}
+			
+			if ( sbl == null ) {
+				// It is only possible when all polygons
+				// are on the same horizontal line.
+				
+				return;
 			}
 			
 			var yt = popScanbeam ();	// Top of the current scan beam
@@ -266,103 +276,241 @@ class VattiClipper {
 			return;
 		
 		var p0:Point = it.next ();
-		var prevEdge:Edge = null;
-		var firstEdge:Edge = null;
+		var p1:Point = null;
+		var extrIdx:UInt = 0;	// Extremum vertex index
+		var extrFound = false;	// Whether extemum was found during scan?
 		var prevDy:Float = 0;	// Previous non-zero delta y
-		var lastJointIsLocalMimima:Bool = false;
-		var firstJointIsLocalMimima:Null <Bool> = null;
+		var dx:Float = 0, dy:Float = 0;
+		var k:Float = 0;
 		
+		// Seek for first extremum vertex index
 		while ( it.hasNext () ) {
-			var p1:Point = it.next ();
-			
-			var dy = p1.y - p0.y;
-			var dx = p1.x - p0.x;
-			var k:Float = 0;
-			var edge:Edge;
+			p1 = it.next ();
+			dy = p1.y - p0.y;
 			
 			if ( dy != 0 ) {
+				dx = p1.x - p0.x;
 				k = dx / dy;
 				
-				if ( !Math.isFinite ( k ) ) {
-					if ( dx == 0 ) {	// Skip zero-length edge
-						continue;
-					} else {
-						dy = 0;
-						
-						// p0.y and p1.y slightly differs, fix it.
-						p1 = new Point ( p1.x, p0.y );
-					}
+				if ( !Math.isFinite ( k ) ) {	// Then edge is indistinguishable from horizontal
+					// p0.y and p1.y slightly differs, fix it.
+					p0 = new Point ( p1.x, p0.y );
+					extrIdx++;
+					
+					continue;
 				}
-			} else if ( dx == 0 /*&& dy == 0*/ ) {	// Skip zero-length edge
+			} else /*if ( dy == 0 )*/ {
+				p0 = p1;
+				extrIdx++;
+				
 				continue;
 			}
 			
-			if ( dy == 0 ) {
-				if ( prevDy > 0 )
-					edge = new Edge ( p1.x, p0.y, -dx );
-				else
-					edge = new Edge ( p0.x, p0.y, dx );
+			if ( prevDy * dy < 0 ) {
+				extrFound = true;
 				
-				/* prevDy == 0 is a special case. It doesn't mean that 
-				 * previous edge was horizontal as well as curent edge (which is
-				 * impossible because of the collinear edge removal stage that
-				 * must precede clipping). It just mean that this is the first edge
-				 * being processed so we handle its orientation later when we connect
-				 * first and last edge. */
-				
-				edge.isHorizontal = true;
-			} else if ( dy > 0 )
-				edge = new Edge ( p1.x, p0.y, k );
-			else
-				edge = new Edge ( p0.x, p1.y, k );
-			
-			if ( prevEdge != null ) {
-				lastJointIsLocalMimima = false;
-				
-				if ( dy * prevDy >= 0 ) {	// Monotonicity preserved
-					if ( dy == 0 ) {
-						if ( prevDy > 0 )
-							edge.successor = prevEdge;
-						else
-							prevEdge.successor = edge;
-					} else if ( dy > 0 )
-						edge.successor = prevEdge;
-					else
-						prevEdge.successor = edge;
-				} else if ( prevDy > 0 && dy < 0 )	// We got local maxima
-					addLocalMaxima ( prevEdge, edge, p0.y, polyKind );
-				else {								// We got local minima
-					lastJointIsLocalMimima = true;
-					
-					if ( firstJointIsLocalMimima == null )
-						firstJointIsLocalMimima = true;
-					
-					addLocalMinima ( prevEdge, edge, p0.x, p0.y );
-				}
-				
-				if ( firstJointIsLocalMimima == null )
-					firstJointIsLocalMimima = false;
-			} else
-				firstEdge = edge;
-			
-			prevEdge = edge;
+				break;
+			}
 			
 			if ( dy != 0 )
 				prevDy = dy;
 			
 			p0 = p1;
+			extrIdx++;
 		}
 		
-		/* Now process first and last edge. This is necessary because in previous loop they
-		 * weren't processed in pair so they could be not connected appropriately or we might have
-		 * missed local maximum settled in the first vertex. Also first or last edge might be
-		 * horizontal with wrong orientation which must be fixed.
-		 * Following cases illustrated in document "/doc/initLmlAndSbl connect first and last edge cases.svg"
-		 * and code refers to illustrations using comments in form [Case #].*/
-		if ( firstEdge != null ) {	// It may be null if pts contains only one point
+		var prevEdge:Edge = null;
+		var firstEdge:Edge = null;
+		var lastEdge:Edge = null;
+		
+		if ( extrIdx == 0 )			// 1-point polygon
+			return;
+		else if ( !extrFound ) {	// Monotone polyline
+			it = pts.iterator ();
+			p0 = it.next ();
+			var pFirst = p0;
+			var isIncreasing = prevDy > 0;	// When prevDy == 0 it means that all edges of polygon are horizontal
+			var prePrevEdge:Edge = null;	// In case when lastEdge is zero-length.
+			
+			while ( it.hasNext () ) {
+				p1 = it.next ();
+				
+				dy = p1.y - p0.y;
+				dx = p1.x - p0.x;
+				var edge:Edge;
+				
+				if ( dy != 0 ) {
+					k = dx / dy;
+					
+					if ( !Math.isFinite ( k ) ) {
+						dy = 0;
+						
+						// p0.y and p1.y slightly differs, fix it.
+						p1 = new Point ( p1.x, p0.y );
+					}
+				} else if ( dx == 0 /*&& dy == 0*/ ) {	// Skip zero-length edge
+					continue;
+				}
+				
+				if ( dy == 0 ) {
+					if ( isIncreasing )
+						edge = new Edge ( p1.x, p0.y, -dx );
+					else
+						edge = new Edge ( p0.x, p0.y, dx );
+					
+					edge.isHorizontal = true;
+				} else if ( isIncreasing )
+					edge = new Edge ( p1.x, p0.y, k );
+				else
+					edge = new Edge ( p0.x, p1.y, k );
+				
+				if ( prevEdge != null ) {
+					if ( isIncreasing )
+						edge.successor = prevEdge;
+					else
+						prevEdge.successor = edge;
+				} else
+					firstEdge = edge;
+				
+				prePrevEdge = prevEdge;
+				prevEdge = edge;
+				p0 = p1;
+			}
+			
+			var pLast = p1;
+			
+			if ( prevDy == 0 ) {
+				// Then last edge is horizontal as well as others, but unlike others is increasing.
+				dx = pLast.x - pFirst.x;
+				
+				if ( dx == 0 ) {	// Last edge is zero-length
+					lastEdge = prevEdge;
+					pLast.x = lastEdge.bottomX;
+					reverseHorizontalEdge ( lastEdge );
+					prevEdge = prePrevEdge;
+				} else
+					lastEdge = new Edge ( pFirst.x, pFirst.y, dx );
+			} else {
+				// Last edge cannot be nor horizontal neither zero-length
+				if ( isIncreasing )	// Then the last edge is decreasing
+					lastEdge = new Edge ( pLast.x, pFirst.y, k );
+				else
+					lastEdge = new Edge ( pFirst.x, pLast.y, k );
+			}
+			
+			// Add local minima and local maxima
+			if ( isIncreasing ) {
+				addLocalMaxima ( lastEdge, prevEdge, pLast.y, polyKind );
+				addLocalMinima ( lastEdge, firstEdge, pFirst.x, pFirst.y );
+			} else {
+				addLocalMaxima ( lastEdge, firstEdge, pFirst.y, polyKind );
+				addLocalMinima ( lastEdge, prevEdge, pLast.x, pLast.y );
+			}
+		} else {	// Ordinary polygon
+			/* At this point iterator must be stopped on p1,
+			 * prevDy must have sign opposite to dy.
+			 * Also dx and k are set appropriately. */
+			
+			it = new ConcatIterator ( it, new TakeIterator ( pts.iterator (), extrIdx + 1 ) );
+			
+			prevDy = 0;
+			var lastJointIsLocalMimima:Bool = false;
+			var firstJointIsLocalMimima:Null <Bool> = null;
+			
+			while ( true ) {
+				var edge:Edge;
+				
+				if ( dy == 0 ) {
+					if ( prevDy > 0 )
+						edge = new Edge ( p1.x, p0.y, -dx );
+					else
+						edge = new Edge ( p0.x, p0.y, dx );
+					
+					/* prevDy == 0 is a special case. It doesn't mean that 
+					 * previous edge was horizontal as well as curent edge. It just means
+					 * that this is the first edge being processed so we handle its
+					 * orientation later when we connect first and last edge. */
+					
+					edge.isHorizontal = true;
+				} else if ( dy > 0 )
+					edge = new Edge ( p1.x, p0.y, k );
+				else
+					edge = new Edge ( p0.x, p1.y, k );
+				
+				if ( prevEdge != null ) {
+					lastJointIsLocalMimima = false;
+					
+					if ( dy * prevDy >= 0 ) {	// Monotonicity preserved
+						if ( dy == 0 ) {
+							if ( prevDy > 0 )
+								edge.successor = prevEdge;
+							else
+								prevEdge.successor = edge;
+						} else if ( dy > 0 )
+							edge.successor = prevEdge;
+						else
+							prevEdge.successor = edge;
+					} else if ( prevDy > 0 && dy < 0 )	// We got local maxima
+						addLocalMaxima ( prevEdge, edge, p0.y, polyKind );
+					else {								// We got local minima
+						lastJointIsLocalMimima = true;
+						
+						if ( firstJointIsLocalMimima == null )
+							firstJointIsLocalMimima = true;
+						
+						addLocalMinima ( prevEdge, edge, p0.x, p0.y );
+					}
+					
+					if ( firstJointIsLocalMimima == null )
+						firstJointIsLocalMimima = false;
+				} else
+					firstEdge = edge;
+				
+				prevEdge = edge;
+				
+				if ( dy != 0 )
+					prevDy = dy;
+				
+				p0 = p1;
+				
+				if ( !it.hasNext () )
+					break;
+				
+				do {
+					p1 = it.next ();
+					
+					dy = p1.y - p0.y;
+					dx = p1.x - p0.x;
+					
+					if ( dy != 0 ) {
+						k = dx / dy;
+						
+						if ( !Math.isFinite ( k ) ) {
+							dy = 0;
+							
+							// p0.y and p1.y slightly differs, fix it.
+							p1 = new Point ( p1.x, p0.y );
+						}
+						
+						// Edge is definitely not zero-length so we may proceed with it.
+						break;
+					}
+					
+					// Repeat while [p0;p1] is zero-length edge.
+				} while ( dx == 0 /*&& dy == 0*/ && it.hasNext () );
+			}
+			
+			/* Now process first and last edge. This is necessary because in previous loop they
+			 * weren't processed in pair so they could be not connected appropriately or we might have
+			 * missed local extremum settled in the first vertex. Also first or last edge might be
+			 * horizontal with wrong orientation which must be fixed.
+			 * Following cases illustrated in document "/doc/initLmlAndSbl connect first and last edge cases.svg"
+			 * and code refers to illustrations using comments in form [Case #].
+			 * firstEdge may not be null because 1-point polygon was already discarded.*/
+			
 			/* Note that at this point prevEdge contains last edge
 			 * and p0 coincides with first point of the polygon. */
-			var lastEdge:Edge = prevEdge;
+			lastEdge = prevEdge;
 			
 			if ( firstEdge.successor == null ) {
 				if ( lastEdge.successor == null ) {
@@ -651,6 +799,7 @@ class VattiClipper {
 	private function processEdgesInAelHorizontal ():Void {
 		var helNode = hel;
 		
+		// First of all remove terminating edges from HEL
 		do {
 			var aelNode = helNode.value;
 			var edge = aelNode.edge;
@@ -659,6 +808,21 @@ class VattiClipper {
 			if ( edge.successor.isLocalMinima () ) {
 				var lMin = cast ( edge.successor, LocalMinima );
 				var otherEdge:Edge = edge == lMin.edge2 ? lMin.edge1 : lMin.edge2;
+				
+				if ( !( ( aelNode.next != null && aelNode.next.edge == otherEdge ) ||
+				        ( aelNode.prev != null && aelNode.prev.edge == otherEdge ) ) )
+				{
+					// Then other edge is horizontal too but it is not ending right now.
+					// We must defer its processing.
+					
+					if ( !edge.isHorizontal || !otherEdge.isHorizontal )
+						throw "Assertion failed";
+					
+					helNode = helNode.next;
+					
+					continue;
+				}
+				
 				var aelNode1:ActiveEdge, aelNode2:ActiveEdge;
 				
 				if ( aelNode.next != null && aelNode.next.edge == otherEdge ) {
@@ -681,8 +845,39 @@ class VattiClipper {
 				if ( ael == aelNode1 )
 					ael = nextAelNode;
 				
+				if ( otherEdge.isHorizontal ) {	// Then it should be removed from HEL as well as current edge
+					// Find helNode wrapping otherEdge
+					var otherHelNode = helNode.next;
+					while ( otherHelNode.value.edge != otherEdge ) { otherHelNode = otherHelNode.next; }
+					
+					otherHelNode.removeSelf ();
+				}
+				
 				removeHelNode = true;
-			} else {
+			}
+			
+			if ( removeHelNode ) {
+				var nextHelNode = helNode.next;
+				
+				helNode.removeSelf ();
+				
+				if ( hel == helNode )
+					hel = nextHelNode;
+				
+				helNode = nextHelNode;
+			} else
+				helNode = helNode.next;
+		} while ( helNode != null );
+		
+		helNode = hel;
+		
+		// Now advance remaining HEL nodes to their successors
+		while ( helNode != null ) {
+			var aelNode = helNode.value;
+			var edge = aelNode.edge;
+			var removeHelNode = false;
+			
+			if ( !edge.successor.isLocalMinima () ) {
 				if ( aelNode.contributing ) {
 					if ( aelNode.side == Side.Left )	// Left intermediate
 						addLeft ( aelNode, new Point ( edge.successor.bottomX, edge.topY ) );
@@ -710,7 +905,7 @@ class VattiClipper {
 				helNode = nextHelNode;
 			} else
 				helNode = helNode.next;
-		} while ( helNode != null );
+		}
 	}
 	
 	private inline function addLeft ( aelNode:ActiveEdge, p:Point ):Void {
@@ -819,7 +1014,7 @@ class VattiClipper {
 			var e2Node = selRight;
 			
 			while ( e2Node != null && e1Node.topXIntercept < e2Node.value.topXIntercept ) {
-				var isec = intersectionOf ( e2Node.value, e1Node, yb, dy );	// e2 is to the left of the e1 in the ael
+				var isec = intersectionOf2 ( e2Node.value, e1Node, yb, dy );	// e2 is to the left of the e1 in the ael
 				addIntersection ( isec );
 				
 				// Update e2 to denote edge to its left in SEL
@@ -924,16 +1119,22 @@ class VattiClipper {
 				var lMin = cast ( selLeft.value.edge.successor, LocalMinima );
 				var otherEdge:Edge = selLeft.value.edge == lMin.edge2 ? lMin.edge1 : lMin.edge2;
 				
+				// TODO: when buildApexIntersections () called from buildIntersectionList (), it is only necessary
+				// to check whether otherEdge is horizontal in order to skip edge.
+				
 				// Find selNode pointing to other edge ending at local minima
 				selRight = selLeft.next;
 				
 				while ( selRight != null && selRight.value.edge != otherEdge ) { selRight = selRight.next; }
 				
 				if ( selRight == null ) {
-					// Then other edge ending at local minima is horizontal while selLeft is not.
-					// We must defer its processing until processing of horizontal edges.
+					// There are two possible cases:
+					// 1. Other edge ending at local minima is horizontal while selLeft is not.
+					// 2. Both edges are horizontal but one of the bellows have more horizontal edges
+					//   than the other and that's why it does not ends right now.
+					// We must defer its processing.
 					
-					if ( selLeft.value.edge.isHorizontal || !otherEdge.isHorizontal )
+					if ( !otherEdge.isHorizontal )
 						throw "Assertion failed";
 					
 					selLeft = selLeft.next;
@@ -993,8 +1194,8 @@ class VattiClipper {
 	 * @return	Intersection between two edges.
 	 */
 	private static inline function intersectionOf ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float, dy:Float ):Intersection {
-		/* dxt is an absolute value of difference between top x intercepts.
-		 * dxb is an absolute value of difference between bottom x intercepts.
+		/* dxt is absolute value of difference between top x intercepts.
+		 * dxb is absolute value of difference between bottom x intercepts.
 		 * 
 		 * System of equations where dy and k are known (k = dxb / dxt),
 		 * ht and hb are altitudes for top and bottom
@@ -1026,6 +1227,57 @@ class VattiClipper {
 		var hb = dy * dxb / ( dxb + dxt );
 		var yIsec = yb + hb;
 		var p = new Point ( topX ( e1Node, yIsec ), yIsec );
+		
+		return	new Intersection ( e1Node, e2Node, p, k );
+	}
+	
+	/**
+	 * Finds intersection point of two edges. Note that it should be known apriori that two given
+	 * edges intersects. This function only calculates where exactly intersection is and it may have
+	 * unpredicted behavior in case when edges are parallel to each other.
+	 * @param	e1	First edge known to intersect other edge.
+	 * @param	e2	Second edge. Should be to the right of the e1 in Active Edge List!
+	 * @param	yb	Bottom of the scanbeam.
+	 * @param	dy	Difference between top and bottom of the scanbeam.
+	 * @return	Intersection between two edges.
+	 */
+	private static inline function intersectionOf2 ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float, dy:Float ):Intersection {
+		/* dxt is absolute value of difference between top x intercepts.
+		 * dxb is absolute value of difference between bottom x intercepts.
+		 * 
+		 * System of equations where dy and k are known (k = dxb / dxt),
+		 * ht and hb are altitudes for top and bottom
+		 * triangles respectively:
+		 * dy == hb + ht
+		 * k == hb / ht
+		 * 
+		 * From the second eq:
+		 * ht = hb / k
+		 * 
+		 * Substitute into the first eq:
+		 * dy == hb + hb / k
+		 * dy == hb * ( 1 + 1 / k )
+		 * dy / ( 1 + 1 / k ) == hb
+		 * 
+		 * Improve numerical stability by substituting k:
+		 * dy / ( 1 + 1 / ( dxb / dxt ) ) == hb
+		 * dy / ( 1 + dxt / dxb ) == hb
+		 * dy / ( ( dxb + dxt ) / dxb ) == hb
+		 * dy * dxb / ( dxb + dxt ) == hb
+		 * 
+		 * NOTE on why k = dxb / dxt, not dxt / dxb:
+		 * dxb can be zero while (mathematically) dxt can't.
+		 * Sometimes, due to floating-point cancellation, dxt can be zero too,
+		 * however dxb / dxt will be positive infinity and this is ok.*/
+		var dxt = Math.abs ( e1Node.topXIntercept - e2Node.topXIntercept );
+		var dxb = Math.abs ( e1Node.bottomXIntercept - e2Node.bottomXIntercept );
+		var k = dxb / dxt;
+		var hb = dy * dxb / ( dxb + dxt );
+		var yIsec = yb + hb;
+		var x = ( e2Node.bottomXIntercept * e1Node.topXIntercept - e1Node.bottomXIntercept * e2Node.topXIntercept ) /
+			( e2Node.bottomXIntercept - e1Node.bottomXIntercept + e1Node.topXIntercept - e2Node.topXIntercept );
+		
+		var p = new Point ( x, yIsec );
 		
 		return	new Intersection ( e1Node, e2Node, p, k );
 	}
