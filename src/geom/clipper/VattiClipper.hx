@@ -1014,7 +1014,7 @@ class VattiClipper {
 			var e2Node = selRight;
 			
 			while ( e2Node != null && e1Node.topXIntercept < e2Node.value.topXIntercept ) {
-				var isec = intersectionOf2 ( e2Node.value, e1Node, yb, dy );	// e2 is to the left of the e1 in the ael
+				var isec = intersectionOf ( e2Node.value, e1Node, yb, dy );	// e2 is to the left of the e1 in the ael
 				addIntersection ( isec );
 				
 				// Update e2 to denote edge to its left in SEL
@@ -1226,58 +1226,12 @@ class VattiClipper {
 		var k = dxb / dxt;
 		var hb = dy * dxb / ( dxb + dxt );
 		var yIsec = yb + hb;
-		var p = new Point ( topX ( e1Node, yIsec ), yIsec );
+		var p:Point;
 		
-		return	new Intersection ( e1Node, e2Node, p, k );
-	}
-	
-	/**
-	 * Finds intersection point of two edges. Note that it should be known apriori that two given
-	 * edges intersects. This function only calculates where exactly intersection is and it may have
-	 * unpredicted behavior in case when edges are parallel to each other.
-	 * @param	e1	First edge known to intersect other edge.
-	 * @param	e2	Second edge. Should be to the right of the e1 in Active Edge List!
-	 * @param	yb	Bottom of the scanbeam.
-	 * @param	dy	Difference between top and bottom of the scanbeam.
-	 * @return	Intersection between two edges.
-	 */
-	private static inline function intersectionOf2 ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float, dy:Float ):Intersection {
-		/* dxt is absolute value of difference between top x intercepts.
-		 * dxb is absolute value of difference between bottom x intercepts.
-		 * 
-		 * System of equations where dy and k are known (k = dxb / dxt),
-		 * ht and hb are altitudes for top and bottom
-		 * triangles respectively:
-		 * dy == hb + ht
-		 * k == hb / ht
-		 * 
-		 * From the second eq:
-		 * ht = hb / k
-		 * 
-		 * Substitute into the first eq:
-		 * dy == hb + hb / k
-		 * dy == hb * ( 1 + 1 / k )
-		 * dy / ( 1 + 1 / k ) == hb
-		 * 
-		 * Improve numerical stability by substituting k:
-		 * dy / ( 1 + 1 / ( dxb / dxt ) ) == hb
-		 * dy / ( 1 + dxt / dxb ) == hb
-		 * dy / ( ( dxb + dxt ) / dxb ) == hb
-		 * dy * dxb / ( dxb + dxt ) == hb
-		 * 
-		 * NOTE on why k = dxb / dxt, not dxt / dxb:
-		 * dxb can be zero while (mathematically) dxt can't.
-		 * Sometimes, due to floating-point cancellation, dxt can be zero too,
-		 * however dxb / dxt will be positive infinity and this is ok.*/
-		var dxt = Math.abs ( e1Node.topXIntercept - e2Node.topXIntercept );
-		var dxb = Math.abs ( e1Node.bottomXIntercept - e2Node.bottomXIntercept );
-		var k = dxb / dxt;
-		var hb = dy * dxb / ( dxb + dxt );
-		var yIsec = yb + hb;
-		var x = ( e2Node.bottomXIntercept * e1Node.topXIntercept - e1Node.bottomXIntercept * e2Node.topXIntercept ) /
-			( e2Node.bottomXIntercept - e1Node.bottomXIntercept + e1Node.topXIntercept - e2Node.topXIntercept );
-		
-		var p = new Point ( x, yIsec );
+		if ( Math.abs ( e1Node.edge.dx ) < Math.abs ( e2Node.edge.dx ) )
+			p = new Point ( topX ( e1Node, yIsec ), yIsec );
+		else
+			p = new Point ( topX ( e2Node, yIsec ), yIsec );
 		
 		return	new Intersection ( e1Node, e2Node, p, k );
 	}
