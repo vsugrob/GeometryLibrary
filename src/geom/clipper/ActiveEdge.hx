@@ -49,6 +49,10 @@ class ActiveEdge {
 		this.kind = kind;
 	}
 	
+	public inline function topX ( y:Float ):Float {
+		return	edge.bottomX + edge.dx * ( y - bottomY );
+	}
+	
 	public inline function insertNext ( edge:Edge, kind:PolyKind ):Void {
 		var dl = new ActiveEdge ( edge, kind, this, this.next );
 		

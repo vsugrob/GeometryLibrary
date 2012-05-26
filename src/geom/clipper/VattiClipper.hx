@@ -77,13 +77,8 @@ class VattiClipper {
 		var yb = popScanbeam ();	// Bottom of current scanbeam
 		
 		do {
-			addNewBoundPairs ( yb );	// Modifies ael
-			
-			while ( hel != null && ael != null ) {
-				buildHorizontalIntersectionList ( yb );
-				processIntersectionList ();
-				processEdgesInAelHorizontal ();
-			}
+			addNewBoundPairs ( yb );		// Modifies ael
+			processHorizontalEdges ( yb );
 			
 			if ( sbl == null ) {
 				// It is only possible when all polygons
@@ -96,6 +91,7 @@ class VattiClipper {
 			
 			processIntersections ( yb, yt );
 			processEdgesInAel ( yb, yt );
+			processHorizontalEdges ( yt );
 			
 			yb = yt;
 		} while ( sbl != null );
@@ -910,16 +906,20 @@ class VattiClipper {
 		}
 	}
 	
+	private inline function processHorizontalEdges ( y:Float ):Void {
+		while ( hel != null && ael != null ) {
+			buildHorizontalIntersectionList ( y );
+			processIntersectionList ( y, y );	// Zero-height scanbeam
+			processEdgesInAelHorizontal ();
+		}
+	}
+	
 	private inline function addLeft ( aelNode:ActiveEdge, p:Point ):Void {
 		aelNode.poly.prependPoint ( p );
 	}
 	
 	private inline function addRight ( aelNode:ActiveEdge, p:Point ):Void {
 		aelNode.poly.appendPoint ( p );
-	}
-	
-	private static inline function topX ( aelNode:ActiveEdge, y:Float ):Float {
-		return	aelNode.edge.bottomX + aelNode.edge.dx * ( y - aelNode.bottomY );
 	}
 	
 	private inline function addLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void {
@@ -992,7 +992,7 @@ class VattiClipper {
 			return;
 		
 		buildIntersectionList ( yb, yt );
-		processIntersectionList ();
+		processIntersectionList ( yb, yt );
 	}
 	
 	private function buildIntersectionList ( yb:Float, yt:Float ):Void {
@@ -1004,11 +1004,11 @@ class VattiClipper {
 		var selLeft = new DoublyList <ActiveEdge> ( ael );
 		var selRight = selLeft;
 		
-		ael.topXIntercept = topX ( ael, yt );
+		ael.topXIntercept = ael.topX ( yt );
 		var e1Node = ael.next;
 		
 		while ( e1Node != null ) {
-			e1Node.topXIntercept = topX ( e1Node, yt );
+			e1Node.topXIntercept = e1Node.topX ( yt );
 			
 			/* Starting with the rightmost node of SEL we shall now move from right
 			 * to left through the nodes of SEL checking for an intersection with e1.
@@ -1016,6 +1016,7 @@ class VattiClipper {
 			var e2Node = selRight;
 			
 			while ( e2Node != null && e1Node.topXIntercept < e2Node.value.topXIntercept ) {
+				// Make deferred intersection.
 				var isec = intersectionOf ( e2Node.value, e1Node, yb, dy );	// e2 is to the left of the e1 in the ael
 				addIntersection ( isec );
 				
@@ -1067,21 +1068,8 @@ class VattiClipper {
 			var e2Node = selRight;
 			
 			while ( e2Node != null && e1Node.topXIntercept < e2Node.value.topXIntercept ) {
-				var p:Point;
-				
-				if ( e1Node.edge.isHorizontal ) {
-					if ( e2Node.value.edge.isHorizontal )
-						p = intersectionPointOfHorizontal ( e1Node, e2Node.value, yb );
-					else
-						p = new Point ( e2Node.value.topXIntercept, yb );
-				} else /*if ( e2Node.value.edge.isHorizontal )*/
-					p = new Point ( e1Node.topXIntercept, yb );
-				
-				// Both e1 and e2 can't be non-horizontal sumultaneously due to equality
-				// of their top and bottom x-intercepts. So they will never be reordered and
-				// therefore intersected by each other.
-				
-				var isec = new Intersection ( e2Node.value, e1Node, p, 0 );	// e2 is to the left of the e1 in the ael
+				// Make deferred horizontal intersection.
+				var isec = new Intersection ( e2Node.value, e1Node, null, 0, true );	// e2 is to the left of the e1 in the ael
 				addIntersectionLast ( isec );
 				
 				// Update e2 to denote edge to its left in SEL
@@ -1148,6 +1136,9 @@ class VattiClipper {
 				
 				// Intersect right edge with all edges between bounds
 				while ( selRight.prev != selLeft ) {
+					/* Create Intersection object with intersection point already set.
+					 * Since the point has already been calculated, it doesn't matter whether intersection was
+					 * horizontal or not. */
 					var isec = new Intersection ( selRight.prev.value, selRight.value, p, Math.POSITIVE_INFINITY );
 					DoublyList.swapAdjacent ( selRight.prev, selRight );
 					
@@ -1186,90 +1177,33 @@ class VattiClipper {
 	}
 	
 	/**
-	 * Finds intersection point of two edges. Note that it should be known apriori that two given
-	 * edges intersects. This function only calculates where exactly intersection is and it may have
-	 * unpredicted behavior in case when edges are parallel to each other.
+	 * Creates deferred Intersection object which is in turn aimed to find intersection point of two edges.
+	 * Note that it should be known apriori that two given edges intersects.
 	 * @param	e1	First edge known to intersect other edge.
 	 * @param	e2	Second edge. Should be to the right of the e1 in Active Edge List!
 	 * @param	yb	Bottom of the scanbeam.
 	 * @param	dy	Difference between top and bottom of the scanbeam.
-	 * @return	Intersection between two edges.
+	 * @return	Intersection of two edges.
 	 */
 	private static inline function intersectionOf ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float, dy:Float ):Intersection {
-		/* dxt is absolute value of difference between top x intercepts.
-		 * dxb is absolute value of difference between bottom x intercepts.
+		/* Let dxt be absolute value of difference between top x intercepts.
+		 * Let dxb be absolute value of difference between bottom x intercepts.
+		 * Given dxb and dxt we can calculate ratio k = dxb / dxt which
+		 * is similarity ratio of two triangles formed by intersecting e1, e2 and
+		 * two horizontal lines of the scanbeam.
 		 * 
-		 * System of equations where dy and k are known (k = dxb / dxt),
-		 * ht and hb are altitudes for top and bottom
-		 * triangles respectively:
-		 * dy == hb + ht
-		 * k == hb / ht
-		 * 
-		 * From the second eq:
-		 * ht = hb / k
-		 * 
-		 * Substitute into the first eq:
-		 * dy == hb + hb / k
-		 * dy == hb * ( 1 + 1 / k )
-		 * dy / ( 1 + 1 / k ) == hb
-		 * 
-		 * Improve numerical stability by substituting k:
-		 * dy / ( 1 + 1 / ( dxb / dxt ) ) == hb
-		 * dy / ( 1 + dxt / dxb ) == hb
-		 * dy / ( ( dxb + dxt ) / dxb ) == hb
-		 * dy * dxb / ( dxb + dxt ) == hb
-		 * 
-		 * NOTE on why k = dxb / dxt, not dxt / dxb:
-		 * dxb can be zero while (mathematically) dxt can't.
-		 * Sometimes, due to floating-point cancellation, dxt can be zero too,
-		 * however dxb / dxt will be positive infinity and this is ok.*/
+		 * NOTE on why we chose k to be equal dxb / dxt, not dxt / dxb:
+		 * dxb can be zero while dxt can't.*/
 		var dxt = Math.abs ( e1Node.topXIntercept - e2Node.topXIntercept );
 		var dxb = Math.abs ( e1Node.bottomXIntercept - e2Node.bottomXIntercept );
 		var k = dxb / dxt;
-		var hb = dy * dxb / ( dxb + dxt );
-		var yIsec = yb + hb;
-		var p:Point;
 		
-		if ( Math.abs ( e1Node.edge.dx ) < Math.abs ( e2Node.edge.dx ) )
-			p = new Point ( topX ( e1Node, yIsec ), yIsec );
-		else
-			p = new Point ( topX ( e2Node, yIsec ), yIsec );
-		
-		return	new Intersection ( e1Node, e2Node, p, k );
+		return	new Intersection ( e1Node, e2Node, null, k );
 	}
 	
-	/**
-	 * Finds intersection point of two horizontal edges.
-	 * This function reimagines edges as non-horizontal edges with their bottom
-	 * ends having x-coordinate in bottomXIntercept and top ends having
-	 * x-coordinate in topXIntercept.
-	 * @param	e1	First edge known to intersect other edge.
-	 * @param	e2	Second edge.
-	 * @param	yb	Bottom of the scanbeam.
-	 * @return	Intersection point between two edges.
-	 */
-	private static inline function intersectionPointOfHorizontal ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float ):Point {
-		/* Let a, b, c, d be e1Node.bottomXIntercept, e2Node.bottomXIntercept,
-		 * e2Node.topXIntercept and e1Node.topXIntercept respectively.
-		 * Let x be unknown x-ccordinate of intersection.
-		 * 
-		 * Solve system of equations:
-		 * { ( b - a ) / ( d - c ) == k,
-		 *   ( b - x ) / ( x - c ) == k } <=>
-		 * ( b - a ) / ( d - c ) == ( b - x ) / ( x - c ) => ( if x - c != 0 )
-		 * ( b - a ) * ( x - c ) == ( b - x ) * ( d - c ) <=>
-		 * bx - bc - ax + ac == bd - bc - dx + cx <=>
-		 * bx - ax + dx - cx == bd - bc + bc - ac <=>
-		 * x * ( b - a + d - c ) == bd - ac => ( if b - a + d - c != 0 )
-		 * x == ( bd - ac ) / ( b - a + d - c )
-		 */
-		var x = ( e2Node.bottomXIntercept * e1Node.topXIntercept - e1Node.bottomXIntercept * e2Node.topXIntercept ) /
-			( e2Node.bottomXIntercept - e1Node.bottomXIntercept + e1Node.topXIntercept - e2Node.topXIntercept );
+	private function processIntersectionList ( yb:Float, yt:Float ):Void {
+		var dy = yt - yb;
 		
-		return	new Point ( x, yb );
-	}
-	
-	private function processIntersectionList ():Void {
 		while ( il != null ) {
 			var isec = il;
 			var prevIsec:Intersection = null;
@@ -1290,6 +1224,8 @@ class VattiClipper {
 				 * (LC ∩ RC) or (RC ∩ LC) → LI and RI
 				 * (LS ∩ RS) or (RS ∩ LS) → LI and RI */
 				if ( e1Node.contributing ) {			// Then e2Node is contributing also
+					isec.calculateIntersectionPoint ( yb, dy );
+					
 					if ( e1Node.side == Side.Left ) {	// Then we assume that e2Node is right
 						addLeft ( e1Node, isec.p );
 						addRight ( e2Node, isec.p );
@@ -1304,6 +1240,8 @@ class VattiClipper {
 				e1Node.side = e2Node.side;
 				e2Node.side = tmpSide;
 			} else if ( e1Node.side == Side.Left ) {
+				isec.calculateIntersectionPoint ( yb, dy );
+				
 				if ( e2Node.side == Side.Left )					// (LC ∩ LS) or (LS ∩ LC) → LI
 					addLeft ( e2Node, isec.p );
 				else /*if ( e2Node.side == Side.Right )*/ {		// (LS ∩ RC) or (LC ∩ RS) → MX
@@ -1314,6 +1252,8 @@ class VattiClipper {
 					e2Node.poly = null;
 				}
 			} else /*if ( e1Node.side == Side.Right )*/ {	
+				isec.calculateIntersectionPoint ( yb, dy );
+				
 				if ( e2Node.side == Side.Right )				// (RC ∩ RS) or (RS ∩ RC) → RI
 					addRight ( e1Node, isec.p );
 				else if ( e2Node.side == Side.Left ) {			// (RS ∩ LC) or (RC ∩ LS) → MN
@@ -1509,7 +1449,7 @@ class VattiClipper {
 	private function drawAelNodeBySide ( graphics:Graphics, aelNode:ActiveEdge, zoom:Float = 1.0 ):Void {
 		var dy = cs_yt - cs_yb;
 		var e = aelNode.edge;
-		var topX = topX ( aelNode, cs_yt );
+		var topX = aelNode.topX ( cs_yt );
 		
 		var color = aelNode.side == Side.Left ? 0xff0000 : 0x00ff00;
 		graphics.lineStyle ( 1 / zoom, color, 1 );
@@ -1540,7 +1480,7 @@ class VattiClipper {
 		
 		while ( aelNode != null ) {
 			var e = aelNode.edge;
-			var topX = topX ( aelNode, cs_yt );
+			var topX = aelNode.topX ( cs_yt );
 			
 			var color:UInt;
 			

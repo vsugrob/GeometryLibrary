@@ -183,10 +183,14 @@ class Main {
 		
 		/*// Test: overlapping edges of the same poly
 		var subject = [
-			new Point ( -10, -10 ),
-			new Point ( 600, 0 ),
-			new Point ( 610, 610 ),
-			new Point ( 0, 600 ),
+			//new Point ( -10, -10 ),
+			//new Point ( 600, 0 ),
+			//new Point ( 610, 610 ),
+			//new Point ( 0, 600 ),
+			new Point ( 100, 100 ),
+			new Point ( 400, 100 ),
+			new Point ( 410, 410 ),
+			new Point ( 0, 400 ),
 		];
 		
 		var clip = [
@@ -205,10 +209,14 @@ class Main {
 		
 		/*// Test: "wings"
 		var bgPoly = [
-			new Point ( -10, -10 ),
-			new Point ( 600, 0 ),
-			new Point ( 610, 610 ),
-			new Point ( 0, 600 ),
+			//new Point ( -10, -10 ),
+			//new Point ( 600, 0 ),
+			//new Point ( 610, 610 ),
+			//new Point ( 0, 600 ),
+			new Point ( 100, 100 ),
+			new Point ( 400, 100 ),
+			new Point ( 410, 410 ),
+			new Point ( 0, 400 ),
 		];
 		
 		var leftWing = [
@@ -229,10 +237,14 @@ class Main {
 		
 		/*// Test: "wings" rearranged
 		var bgPoly = [
-			new Point ( -10, -10 ),
-			new Point ( 600, 0 ),
-			new Point ( 610, 610 ),
-			new Point ( 0, 600 ),
+			//new Point ( -10, -10 ),
+			//new Point ( 600, 0 ),
+			//new Point ( 610, 610 ),
+			//new Point ( 0, 600 ),
+			new Point ( 100, 100 ),
+			new Point ( 400, 100 ),
+			new Point ( 410, 410 ),
+			new Point ( 0, 400 ),
 		];
 		
 		var leftWing = [
@@ -253,10 +265,14 @@ class Main {
 		
 		/*// Test: singly-rooted tooth
 		var bgPoly = [
-			new Point ( -10, -10 ),
-			new Point ( 600, 0 ),
-			new Point ( 610, 610 ),
-			new Point ( 0, 600 ),
+			//new Point ( -10, -10 ),
+			//new Point ( 600, 0 ),
+			//new Point ( 610, 610 ),
+			//new Point ( 0, 600 ),
+			new Point ( 100, 100 ),
+			new Point ( 400, 100 ),
+			new Point ( 410, 410 ),
+			new Point ( 0, 400 ),
 		];
 		
 		var tooth = [
@@ -274,10 +290,14 @@ class Main {
 		
 		/*// Test: q-shaped poly.
 		var bgPoly = [
-			new Point ( -10, -10 ),
-			new Point ( 600, 0 ),
-			new Point ( 610, 610 ),
-			new Point ( 0, 600 ),
+			//new Point ( -10, -10 ),
+			//new Point ( 600, 0 ),
+			//new Point ( 610, 610 ),
+			//new Point ( 0, 600 ),
+			new Point ( 100, 100 ),
+			new Point ( 400, 100 ),
+			new Point ( 410, 410 ),
+			new Point ( 0, 400 ),
 		];
 		
 		var tooth = [
@@ -298,10 +318,14 @@ class Main {
 		
 		/*// Test: many-rooted tooth
 		var bgPoly = [
-			new Point ( -10, -10 ),
-			new Point ( 600, 0 ),
-			new Point ( 610, 610 ),
-			new Point ( 0, 600 ),
+			//new Point ( -10, -10 ),
+			//new Point ( 600, 0 ),
+			//new Point ( 610, 610 ),
+			//new Point ( 0, 600 ),
+			new Point ( 100, 100 ),
+			new Point ( 400, 100 ),
+			new Point ( 410, 410 ),
+			new Point ( 0, 400 ),
 		];
 		
 		var tooth = [
@@ -373,10 +397,14 @@ class Main {
 		
 		/*// Test: flipped many-rooted tooth
 		var bgPoly = [
-			new Point ( -10, -10 ),
-			new Point ( 600, 0 ),
-			new Point ( 610, 610 ),
-			new Point ( 0, 600 ),
+			//new Point ( -10, -10 ),
+			//new Point ( 600, 0 ),
+			//new Point ( 610, 610 ),
+			//new Point ( 0, 600 ),
+			new Point ( 100, 100 ),
+			new Point ( 400, 100 ),
+			new Point ( 410, 410 ),
+			new Point ( 0, 400 ),
 		];
 		
 		var tooth = [
@@ -479,7 +507,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: several coincident horizontal edges.
+		/*// Test: several coincident horizontal edges.
 		var subject = [
 			new Point ( 300, 500 ),
 			new Point ( 400, 400 ),
@@ -497,7 +525,7 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: horizontal edge pairing to terminating edge
 		var subject = [
@@ -534,7 +562,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: two shifted squares
+		// Test: two shifted squares
 		var subject = [
 			new Point ( 200, 200 ),
 			new Point ( 400, 200 ),
@@ -547,6 +575,24 @@ class Main {
 			new Point ( 500, 200 ),
 			new Point ( 500, 400 ),
 			new Point ( 300, 400 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );
+		
+		/*// Test: horizontal edge arriving at local maxima
+		// and (possibly) intersecting terminating edges
+		// already present in AEL
+		var subject = [
+			new Point ( 400, 500 ),
+			new Point ( 500, 300 ),
+			new Point ( 300, 300 ),
+		];
+		
+		var clip = [
+			new Point ( 100, 300 ),
+			new Point ( 400, 300 ),
+			new Point ( 300, 100 ),
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
@@ -670,6 +716,8 @@ class Main {
 				clipper.traceIl ();
 			else if ( kb.keyCode == 77 )
 				morpher.stopped = !morpher.stopped;
+			else if ( kb.keyCode == 90 )
+				trace ( "zoom: " + panAndZoom.zoom );
 		} );
 	}
 	
