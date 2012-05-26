@@ -35,6 +35,7 @@ class Main {
 	static var debugSprite:Sprite;
 	static var inputPolys:List <InputPolygon>;
 	static var panAndZoom:PanAndZoom;
+	static var morpher:DebugPolyMorpher;
 	
 	static function main () {
 		var stage = Lib.current.stage;
@@ -271,6 +272,30 @@ class Main {
 		addInputPolygon ( bgPoly, PolyKind.Subject );
 		addInputPolygon ( tooth, PolyKind.Clip );*/
 		
+		/*// Test: q-shaped poly.
+		var bgPoly = [
+			new Point ( -10, -10 ),
+			new Point ( 600, 0 ),
+			new Point ( 610, 610 ),
+			new Point ( 0, 600 ),
+		];
+		
+		var tooth = [
+			new Point ( 500, 500 ),
+			new Point ( 100, 490 ),
+			new Point ( 110, 100 ),
+			new Point ( 400, 110 ),
+			new Point ( 390, 480 ),
+			new Point ( 300, 470 ),
+			new Point ( 310, 200 ),
+			new Point ( 200, 210 ),
+			new Point ( 210, 300 ),
+			new Point ( 500, 310 ),
+		];
+		
+		addInputPolygon ( bgPoly, PolyKind.Subject );
+		addInputPolygon ( tooth, PolyKind.Clip );*/
+		
 		/*// Test: many-rooted tooth
 		var bgPoly = [
 			new Point ( -10, -10 ),
@@ -454,7 +479,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: several coincident horizontal edges.
+		// Test: several coincident horizontal edges.
 		var subject = [
 			new Point ( 300, 500 ),
 			new Point ( 400, 400 ),
@@ -472,7 +497,7 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
 		/*// Test: horizontal edge pairing to terminating edge
 		var subject = [
@@ -527,8 +552,8 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		var angle = 0.0;
-		var dAngle = 15;
+		/*var angle = 0.0;
+		var dAngle = 5;
 		
 		while ( angle <= 45 ) {
 			// Test: coincident edges of different kind
@@ -553,15 +578,10 @@ class Main {
 				//new Point ( 400, 300 ),
 			//];
 			
-			var center = getPolyCenter ( bgPoly );
-			rotatePoly ( bgPoly, angle * Math.PI / 180, center );
-			rotatePoly ( clip, angle * Math.PI / 180, center );
+			var center = DebugPolyMorpher.getPolyCenter ( bgPoly );
+			DebugPolyMorpher.rotatePoly ( bgPoly, angle * Math.PI / 180, center );
+			DebugPolyMorpher.rotatePoly ( clip, angle * Math.PI / 180, center );
 			//inputPolys = new List <InputPolygon> ();
-			
-			//if ( angle != 22.5 ) {
-				//roundPolyCoords ( bgPoly );
-				//roundPolyCoords ( clip );
-			//}
 			
 			addInputPolygon ( bgPoly, PolyKind.Subject );
 			
@@ -575,7 +595,7 @@ class Main {
 			}
 			
 			try {
-				//clipper.clip ();
+				clipper.clip ();
 			} catch ( ex:Dynamic ) {
 				trace ( 'EXCEPTION. angle: ' + angle + ' dAngle: ' + dAngle );
 				trace ( ex );
@@ -584,54 +604,41 @@ class Main {
 			}
 			
 			angle += dAngle;
-		}
+		}*/
 		
-		/*// Test: poly with two horizontal edges facing same direction
-		var subject = [
-			new Point ( 100, 100 ),
-			new Point ( 200, 100 ),
-			new Point ( 300, 0 ),
-			new Point ( 200, 50 ),
-			new Point ( 150, 100 )
-		];
+		morpher = new DebugPolyMorpher ( inputPolys, 20 );
+		var prevTime:Float = Date.now ().getTime () / 1000;
 		
-		addInputPolygon ( subject, PolyKind.Subject );
+		stage.addEventListener ( Event.ENTER_FRAME, function ( e:Event ) {
+			var nowTime:Float = Date.now ().getTime () / 1000;
+			
+			morpher.update ( nowTime - prevTime );
+			prevTime = nowTime;
+			
+			clipper = new VattiClipper ();
+			
+			for ( inputPoly in inputPolys )
+				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+			
+			clipper.clip ();
+			
+			//debugSprite.graphics.clear ();
+			//drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
+			//clipper.drawOutPolys ( debugSprite.graphics );
+			
+			drawCurrentStep ( panAndZoom.zoom );
+		} );
 		
-		clipper = new VattiClipper ();
-		
-		for ( inputPoly in inputPolys )
-			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
-		
-		clipper.drawLml ( debugSprite.graphics );
-		
-		return;*/
-		
-		
-		clipper = new VattiClipper ();
+		/*clipper = new VattiClipper ();
 		
 		for ( inputPoly in inputPolys )
 			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 		
 		clipper.clip ();
-		//drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
-		clipper.drawOutPolys ( debugSprite.graphics );
+		drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
+		clipper.drawOutPolys ( debugSprite.graphics );*/
 		
-		return;
-		
-		clipper = new VattiClipper ();
-		
-		for ( inputPoly in inputPolys )
-			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
-		
-		
-		//clipper.drawLml ( debugSprite.graphics );
-		//clipper.drawSbl ( debugSprite.graphics, -debugSprite.x, debugSprite.width + debugSprite.x * 2 );
-		
-		//clipper.clip ();
-		//while ( clipper.clipStep () ) {}
-		
-		//clipper.drawOutPolys ( debugSprite.graphics );
-		drawCurrentStep ( panAndZoom.zoom );
+		//drawCurrentStep ( panAndZoom.zoom );
 		
 		var stepNum = 0;
 		
@@ -661,6 +668,8 @@ class Main {
 				clipper.traceAel ();
 			else if ( kb.keyCode == 73 )	// i
 				clipper.traceIl ();
+			else if ( kb.keyCode == 77 )
+				morpher.stopped = !morpher.stopped;
 		} );
 	}
 	
@@ -735,47 +744,5 @@ class Main {
 		
 		VattiClipper.endDrawPolySvg ( buf );
 		buf.add ( '</g>\n' );
-	}
-	
-	private static function rotatePoly ( pts:Iterable <Point>, angle:Float, center:Point = null ):Void {
-		var m = new Matrix ();
-		
-		if ( center == null )
-			center = getPolyCenter ( pts );
-		
-		m.translate ( -center.x, -center.y );
-		m.rotate ( angle );
-		m.translate ( center.x, center.y );
-		
-		for ( p in pts ) {
-			var rp = m.transformPoint ( p );
-			p.x = rp.x;
-			p.y = rp.y;
-		}
-	}
-	
-	private static function roundPolyCoords ( pts:Iterable <Point>, numDecimalPlaces:Int = 0 ):Void {
-		var mul:Float = Math.pow ( 10, numDecimalPlaces );
-		
-		for ( p in pts ) {
-			p.x = Math.round ( p.x * mul );
-			p.y = Math.round ( p.y * mul );
-		}
-	}
-	
-	private static function getPolyCenter ( pts:Iterable <Point> ):Point {
-		var x:Float = 0;
-		var y:Float = 0;
-		var num:Int = 0;
-		
-		for ( p in pts ) {
-			x += p.x;
-			y += p.y;
-			num++;
-		}
-		
-		var invNum:Float = 1 / num;
-		
-		return	new Point ( x * invNum, y * invNum );
 	}
 }

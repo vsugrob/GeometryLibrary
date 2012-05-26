@@ -391,7 +391,9 @@ class VattiClipper {
 				} else
 					lastEdge = new Edge ( pFirst.x, pFirst.y, dx );
 			} else {
-				// Last edge cannot be nor horizontal neither zero-length
+				// Last edge cannot be neither horizontal nor zero-length
+				k = ( pLast.x - pFirst.x ) / ( pLast.y - pFirst.y );
+				
 				if ( isIncreasing )	// Then the last edge is decreasing
 					lastEdge = new Edge ( pLast.x, pFirst.y, k );
 				else
@@ -1577,12 +1579,14 @@ class VattiClipper {
 				polys.add ( poly );
 		}
 		
+		beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth,
+			fill, fillOpacity );
+		
 		for ( poly in polys ) {
-			beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth,
-				fill, fillOpacity );
 			drawPoly ( poly, graphics );
-			endDrawPoly ( graphics );
 		}
+		
+		endDrawPoly ( graphics );
 	}
 	
 	public function drawCurrentScanbeam ( graphics:Graphics, zoom:Float = 1.0 ):Void {
