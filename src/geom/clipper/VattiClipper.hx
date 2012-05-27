@@ -43,6 +43,10 @@ class VattiClipper {
 	 * Pointer to last intersection in il.
 	 */
 	private var ilLast:Intersection;
+	/**
+	 * Currently processed clipping operation (Intersection, Subtraction, Union or XOR ).
+	 */
+	private var clipOp:ClipOperation;
 	
 	public function new () {
 		this.outPolys = new List <ChainedPolygon> ();
@@ -54,6 +58,10 @@ class VattiClipper {
 	 * @param	poly	Iterable of Point.
 	 * @param	kind	Whether this poly is one that will be clipped (PolyKind.Subject) or that which
 	 * will clip (PolyKind.Clip).
+	 * @warning	Currently clipper accepts any kind of polygon. The only restriction is that coordinates
+	 * cannot be NaN or +/-Infinity, it this case result is unpredictable and exceptions are possible.
+	 * TODO: make promise-like system attached to polygon geometrical characteristics as it was implemented
+	 * in previous developments of geometry library.
 	 */
 	public function addPolygon ( poly:Iterable <Point>, kind:PolyKind ):Void {
 		initLmlAndSbl ( poly, kind );
@@ -70,10 +78,11 @@ class VattiClipper {
 		il = null;
 	}
 	
-	public function clip ():Void {
+	public function clip ( operation:ClipOperation ):Void {
 		if ( sbl == null )	// Scanbeam list is empty
 			return;
 		
+		this.clipOp = operation;
 		var yb = popScanbeam ();	// Bottom of current scanbeam
 		
 		do {
@@ -217,7 +226,7 @@ class VattiClipper {
 			if ( e2Node.side == Side.Left ) { 				// (LC ∩ LS) or (LS ∩ LC) → LI
 				addLeft ( e2Node, isec.p );
 				msg += "addLeft ( e2Node, isec.p );";
-			} else /*if ( e2Node.side == Side.Right )*/ {	// (LS ∩ RC) or (LC ∩ RS) → MX
+			} else /*if ( e2Node.side == Side.Right )*/ {	// (LS ∩ RC) or (LC ∩ RS) → MN
 				addLocalMin ( e1Node, e2Node, isec.p );
 				e1Node.contributing = false;
 				e2Node.contributing = false;
@@ -229,7 +238,7 @@ class VattiClipper {
 			if ( e2Node.side == Side.Right ) {				// (RC ∩ RS) or (RS ∩ RC) → RI
 				addRight ( e1Node, isec.p );
 				msg += "addRight ( e1Node, isec.p );";
-			} else if ( e2Node.side == Side.Left ) { 		// (RS ∩ LC) or (RC ∩ LS) → MN
+			} else if ( e2Node.side == Side.Left ) { 		// (RS ∩ LC) or (RC ∩ LS) → MX
 				addLocalMax ( e1Node, e2Node, isec.p );
 				e1Node.contributing = true;
 				e2Node.contributing = true;
@@ -642,7 +651,16 @@ class VattiClipper {
 		}
 		
 		var likeEdgesEven = numLikeEdges % 2 == 0;
-		var contribVertex = numUnlikeEdges % 2 == 1;
+		var contribVertex:Bool;
+		
+		if ( clipOp == ClipOperation.Intersection )
+			contribVertex = numUnlikeEdges % 2 == 1;
+		else /*if ( clipOp == ClipOperation.Subtraction )*/ {
+			if ( numUnlikeEdges % 2 == 0 )
+				contribVertex = kind == PolyKind.Subject;
+			else
+				contribVertex = kind == PolyKind.Clip;
+		}
 		
 		var aelNode1 = new ActiveEdge ( edge1, kind );
 		var aelNode2 = new ActiveEdge ( edge2, kind );
@@ -769,10 +787,16 @@ class VattiClipper {
 					continue;
 				} else {
 					if ( aelNode.contributing ) {
-						if ( aelNode.side == Side.Left )	// Left intermediate
-							addLeft ( aelNode, new Point ( edge.successor.bottomX, yt ) );
-						else 								// Right intermediate
-							addRight ( aelNode, new Point ( edge.successor.bottomX, yt ) );
+						var p = new Point ( edge.successor.bottomX, yt );
+						var invertSides:Bool = false;
+						
+						if ( clipOp == ClipOperation.Subtraction && aelNode.kind == PolyKind.Clip )
+							invertSides = true;
+						
+						if ( ( aelNode.side == Side.Left ) != invertSides )
+							addLeft ( aelNode, p );
+						else
+							addRight ( aelNode, p );
 					}
 					
 					aelNode.edge = edge.successor;
@@ -877,10 +901,16 @@ class VattiClipper {
 			
 			if ( !edge.successor.isLocalMinima () ) {
 				if ( aelNode.contributing ) {
-					if ( aelNode.side == Side.Left )	// Left intermediate
-						addLeft ( aelNode, new Point ( edge.successor.bottomX, edge.topY ) );
-					else 								// Right intermediate
-						addRight ( aelNode, new Point ( edge.successor.bottomX, edge.topY ) );
+					var p = new Point ( edge.successor.bottomX, edge.topY );
+					var invertSides:Bool = false;
+					
+					if ( clipOp == ClipOperation.Subtraction && aelNode.kind == PolyKind.Clip )
+						invertSides = true;
+					
+					if ( ( aelNode.side == Side.Left ) != invertSides )
+						addLeft ( aelNode, p );
+					else
+						addRight ( aelNode, p );
 				}
 				
 				aelNode.edge = edge.successor;
@@ -923,22 +953,27 @@ class VattiClipper {
 	}
 	
 	private inline function addLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void {
-		if ( aelNode1.side == Side.Left )
+		var invertSides:Bool = false;
+		
+		if ( clipOp == ClipOperation.Subtraction && aelNode1.kind == PolyKind.Clip )
+			invertSides = true;
+		
+		if ( ( aelNode1.side == Side.Left ) != invertSides )
 			addLeft ( aelNode1, p );
 		else
 			addRight ( aelNode1, p );
 		
 		if ( aelNode1.poly != aelNode2.poly )	// aelNode1 and aelNode2 have different output polygons
-			appendPolygon ( aelNode1, aelNode2 );
+			appendPolygon ( aelNode1, aelNode2, invertSides );
 		else
 			outPolys.add ( aelNode1.poly );
 	}
 	
-	private function appendPolygon ( e1:ActiveEdge, f1:ActiveEdge ):Void {
+	private function appendPolygon ( e1:ActiveEdge, f1:ActiveEdge, invertSides:Bool ):Void {
 		/* Let P1 = P[p0p1…pn] and P2 = P[q0q1…qs] be the polygons adjacent
 		 * to e1 and f1, respectively. Let e2 and f2 be the other top edges of P1 and P2,
 		 * respectively. */
-		if ( e1.side == Side.Left ) {
+		if ( ( e1.side == Side.Left ) != invertSides ) {
 			/* Quote from VattiClip.pdf:
 			 * "Add vertex list of P2 to the left of vertex list of P1, that is,
 			 * replace P1 by P[qsqs−1…q0p0p1…pn]
@@ -1231,11 +1266,15 @@ class VattiClipper {
 				 * (LS ∩ RS) or (RS ∩ LS) → LI and RI */
 				if ( e1Node.contributing ) {			// Then e2Node is contributing also
 					isec.calculateIntersectionPoint ( yb, dy );
+					var invertSides:Bool = false;
 					
-					if ( e1Node.side == Side.Left ) {	// Then we assume that e2Node is right
+					if ( clipOp == ClipOperation.Subtraction && e1Node.kind == PolyKind.Clip )
+						invertSides = true;
+					
+					if ( ( e1Node.side == Side.Left ) != invertSides ) {
 						addLeft ( e1Node, isec.p );
 						addRight ( e2Node, isec.p );
-					} else {							// e1Node is right e2Node is left
+					} else {
 						addLeft ( e2Node, isec.p );
 						addRight ( e1Node, isec.p );
 					}
@@ -1245,24 +1284,22 @@ class VattiClipper {
 				var tmpSide = e1Node.side;
 				e1Node.side = e2Node.side;
 				e2Node.side = tmpSide;
-			} else if ( e1Node.side == Side.Left ) {
+			} else {
 				isec.calculateIntersectionPoint ( yb, dy );
+				var isecType = isec.classify ( clipOp );
 				
-				if ( e2Node.side == Side.Left )					// (LC ∩ LS) or (LS ∩ LC) → LI
+				switch ( isecType ) {
+				case IntersectionType.LeftIntermediate:
 					addLeft ( e2Node, isec.p );
-				else /*if ( e2Node.side == Side.Right )*/ {		// (LS ∩ RC) or (LC ∩ RS) → MX
+				case IntersectionType.RightIntermediate:
+					addRight ( e1Node, isec.p );
+				case IntersectionType.LocalMinima:
 					addLocalMin ( e1Node, e2Node, isec.p );
 					e1Node.contributing = false;
 					e2Node.contributing = false;
 					e1Node.poly = null;
 					e2Node.poly = null;
-				}
-			} else /*if ( e1Node.side == Side.Right )*/ {	
-				isec.calculateIntersectionPoint ( yb, dy );
-				
-				if ( e2Node.side == Side.Right )				// (RC ∩ RS) or (RS ∩ RC) → RI
-					addRight ( e1Node, isec.p );
-				else if ( e2Node.side == Side.Left ) {			// (RS ∩ LC) or (RC ∩ LS) → MN
+				case IntersectionType.LocalMaxima:
 					addLocalMax ( e1Node, e2Node, isec.p );
 					e1Node.contributing = true;
 					e2Node.contributing = true;

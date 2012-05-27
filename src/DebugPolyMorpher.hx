@@ -73,4 +73,20 @@ class DebugPolyMorpher {
 			p.y = Math.round ( p.y * mul );
 		}
 	}
+	
+	public static function genRandomPoly ( numPoints:UInt = 100, minCoord:Float = -1e6, maxCoord:Float = 1e6 ):Array <Point> {
+		var pts = new Array <Point> ();
+		var rndSpan = maxCoord - minCoord;
+		
+		for ( i in 1...numPoints ) {
+			var p = new Point (
+				Math.random () * rndSpan + minCoord,
+				Math.random () * rndSpan + minCoord
+			);
+			
+			pts.push ( p );
+		}
+		
+		return	pts;
+	}
 }

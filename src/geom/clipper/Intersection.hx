@@ -139,4 +139,48 @@ class Intersection {
 			}
 		}
 	}
+	
+	public inline function classify ( clipOp:ClipOperation ):IntersectionType {
+		if ( clipOp == ClipOperation.Intersection ) {
+			if ( e1Node.side == Side.Left ) {
+				if ( e2Node.side == Side.Left )					// (LC ∩ LS) or (LS ∩ LC) → LI
+					return	IntersectionType.LeftIntermediate;
+				else /*if ( e2Node.side == Side.Right )*/		// (LS ∩ RC) or (LC ∩ RS) → MN
+					return	IntersectionType.LocalMinima;
+			} else /*if ( e1Node.side == Side.Right )*/ {
+				if ( e2Node.side == Side.Right )				// (RC ∩ RS) or (RS ∩ RC) → RI
+					return	IntersectionType.RightIntermediate;
+				else /*if ( e2Node.side == Side.Left )*/		// (RS ∩ LC) or (RC ∩ LS) → MX
+					return	IntersectionType.LocalMaxima;
+			}
+		} else if ( clipOp == ClipOperation.Subtraction ) {
+			if ( e1Node.side == Side.Left ) {
+				if ( e2Node.side == Side.Left ) {
+					if ( e1Node.kind == PolyKind.Subject /*&& e2Node.kind == PolyKind.Clip*/ )		// (LS - LC) → MN
+						return	IntersectionType.LocalMinima;
+					else /*if ( e1Node.kind == PolyKind.Clip && e2Node.kind == PolyKind.Subject )*/	// (LC - LS) → MX
+						return	IntersectionType.LocalMaxima;
+				} else /*if ( e2Node.side == Side.Right )*/ {
+					if ( e1Node.kind == PolyKind.Subject /*&& e2Node.kind == PolyKind.Clip*/ )		// (LS - RC) → LI
+						return	IntersectionType.LeftIntermediate;
+					else /*if ( e1Node.kind == PolyKind.Clip && e2Node.kind == PolyKind.Subject )*/	// (LC - RS) → RI
+						return	IntersectionType.RightIntermediate;
+				}
+			} else /*if ( e1Node.side == Side.Right )*/ {
+				if ( e2Node.side == Side.Left ) {
+					if ( e1Node.kind == PolyKind.Clip /*&& e2Node.kind == PolyKind.Subject*/ )		// (RC - LS) → LI
+						return	IntersectionType.LeftIntermediate;
+					else /*if ( e1Node.kind == PolyKind.Subject && e2Node.kind == PolyKind.Clip )*/	// (RS - LC) → RI
+						return	IntersectionType.RightIntermediate;
+				} else /*if ( e2Node.side == Side.Right )*/ {
+					if ( e1Node.kind == PolyKind.Clip /*&& e2Node.kind == PolyKind.Subject*/ )		// (RC - RS) → MN
+						return	IntersectionType.LocalMinima;
+					else /*if ( e1Node.kind == PolyKind.Subject && e2Node.kind == PolyKind.Clip )*/	// (RS - RC) → MX
+						return	IntersectionType.LocalMaxima;
+				}
+			}
+		}
+		
+		return	null;	// I just put it here until all ops will be implemented.
+	}
 }

@@ -24,6 +24,7 @@ import geom.ClosedPolygonIterator;
 import geom.DoublyList;
 import geom.TakeIterator;
 import geom.ConcatIterator;
+import geom.clipper.ClipOperation;
 
 /**
  * ...
@@ -36,8 +37,52 @@ class Main {
 	static var inputPolys:List <InputPolygon>;
 	static var panAndZoom:PanAndZoom;
 	static var morpher:DebugPolyMorpher;
+	static var clipOp:ClipOperation;
+	
+	static function testRandomPolyClipping ():Void {
+		var stage = Lib.current.stage;
+		var prevTime:Float = Date.now ().getTime ();
+		var numClipsMade:UInt = 0;
+		var totalClipsMade:UInt = 0;
+		stage.frameRate = 100;
+		
+		stage.addEventListener ( Event.ENTER_FRAME, function ( e:Event ) {
+			inputPolys = new List <InputPolygon> ();
+			
+			inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( 10, 0, 600 ), PolyKind.Subject ) );
+			inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( 10, 0, 600 ), PolyKind.Clip ) );
+			
+			clipper = new VattiClipper ();
+			
+			for ( inputPoly in inputPolys )
+				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+			
+			clipper.clip ( clipOp );
+			
+			numClipsMade++;
+			totalClipsMade++;
+			
+			//debugSprite.graphics.clear ();
+			//drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
+			//clipper.drawOutPolys ( debugSprite.graphics );
+			
+			drawCurrentStep ( panAndZoom.zoom );
+			
+			var nowTime:Float = Date.now ().getTime ();
+			var timeDelta:Float = nowTime - prevTime;
+			
+			if ( timeDelta >= 1000 ) {
+				prevTime = nowTime;
+				trace ( "Clips made: " + numClipsMade + ", total: " + totalClipsMade );
+				numClipsMade = 0;
+			}
+		} );
+	}
 	
 	static function main () {
+		//clipOp = ClipOperation.Intersection;
+		clipOp = ClipOperation.Subtraction;
+		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
 		stage.align = StageAlign.TOP_LEFT;
@@ -52,47 +97,10 @@ class Main {
 			drawCurrentStep ( panAndZoom.zoom );
 		} );
 		
-		/*var pts = new Array <Point> ();
-		//pts.push ( new Point ( 0, 200 ) );
-		//pts.push ( new Point ( 200, 200 ) );
-		//pts.push ( new Point ( 400, 200 ) );
-		
-		//pts.push ( new Point ( 100, 300 ) );
-		//pts.push ( new Point ( 150, 320 ) );
-		//pts.push ( new Point ( 200, 320 ) );
-		//pts.push ( new Point ( 220, 370 ) );
-		
-		pts.push ( new Point ( 250, 500 ) );
-		pts.push ( new Point ( 500, 500 ) );
-		pts.push ( new Point ( 500, 100 ) );
-		pts.push ( new Point ( 100, 100 ) );
-		pts.push ( new Point ( 100, 500 ) );
-		
-		
-		var cl = new VattiClipper ();
-		cl.addPolygonNew ( pts, PolyKind.Clip );
-		
-		//pts = new Array <Point> ();
-		//pts.push ( new Point ( 300, 300 ) );
-		//pts.push ( new Point ( 400, 100 ) );
-		//pts.push ( new Point ( 200, 100 ) );
-		//pts.push ( new Point ( 300, 300 ) );	// close
-		
-		pts = new Array <Point> ();
-		pts.push ( new Point ( 0, 0 ) );
-		pts.push ( new Point ( 600, 10 ) );
-		pts.push ( new Point ( 600, 600 ) );
-		pts.push ( new Point ( 0, 610 ) );
-		pts.push ( new Point ( 0, 0 ) );	// close
-		
-		cl.addPolygon ( pts, PolyKind.Subject );
-		
-		cl.clip ();
-		cl.drawOutPolys ( debugSprite.graphics );
-		
-		return;*/
-		
 		inputPolys = new List <InputPolygon> ();
+		
+		/*testRandomPolyClipping ();
+		return;*/
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -544,6 +552,22 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
 		
+		/*// Test: penetrating triangles
+		var subject = [
+			new Point ( 300, 500 ),
+			new Point ( 100, 200 ),
+			new Point ( 500, 250 ),
+		];
+		
+		var clip = [
+			new Point ( 300, 300 ),
+			new Point ( 100, 100 ),
+			new Point ( 500, 110 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
 		/*// Test: two coincident squares
 		var subject = [
 			new Point ( 200, 200 ),
@@ -634,25 +658,26 @@ class Main {
 			//if ( angle != 22.5 )
 				addInputPolygon ( clip, PolyKind.Clip );
 			
-			clipper = new VattiClipper ();
-			
-			for ( inputPoly in inputPolys ) {
-				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
-			}
-			
-			try {
-				clipper.clip ();
-			} catch ( ex:Dynamic ) {
-				trace ( 'EXCEPTION. angle: ' + angle + ' dAngle: ' + dAngle );
-				trace ( ex );
-				
-				break;
-			}
+			//clipper = new VattiClipper ();
+			//
+			//for ( inputPoly in inputPolys ) {
+				//clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+			//}
+			//
+			//try {
+				//clipper.clip ( clipOp );
+			//} catch ( ex:Dynamic ) {
+				//trace ( 'EXCEPTION. angle: ' + angle + ' dAngle: ' + dAngle );
+				//trace ( ex );
+				//
+				//break;
+			//}
 			
 			angle += dAngle;
 		}*/
 		
 		morpher = new DebugPolyMorpher ( inputPolys, 20 );
+		//morpher.stopped = true;
 		var prevTime:Float = Date.now ().getTime () / 1000;
 		
 		stage.addEventListener ( Event.ENTER_FRAME, function ( e:Event ) {
@@ -666,7 +691,7 @@ class Main {
 			for ( inputPoly in inputPolys )
 				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 			
-			clipper.clip ();
+			clipper.clip ( clipOp );
 			
 			//debugSprite.graphics.clear ();
 			//drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
@@ -714,11 +739,34 @@ class Main {
 				clipper.traceAel ();
 			else if ( kb.keyCode == 73 )	// i
 				clipper.traceIl ();
-			else if ( kb.keyCode == 77 )
+			else if ( kb.keyCode == 77 )	// m
 				morpher.stopped = !morpher.stopped;
-			else if ( kb.keyCode == 90 )
+			else if ( kb.keyCode == 90 )	// z
 				trace ( "zoom: " + panAndZoom.zoom );
+			else if ( kb.keyCode == 67 ) {	// c
+				rotateClipOperation ();
+				
+				trace ( clipOp );
+			} else if ( kb.keyCode == 75 )	// k
+				switchPolyKinds ();
 		} );
+	}
+	
+	private static function rotateClipOperation ():Void {
+		switch ( clipOp ) {
+		case ClipOperation.Intersection:
+			clipOp = ClipOperation.Subtraction;
+		//case ClipOperation.Subtraction:
+			//clipOp = ClipOperation.Union;
+		default:
+			clipOp = ClipOperation.Intersection;
+		}
+	}
+	
+	private static function switchPolyKinds ():Void {
+		for ( poly in inputPolys ) {
+			poly.kind = poly.kind == PolyKind.Clip ? PolyKind.Subject : PolyKind.Clip;
+		}
 	}
 	
 	private static function addInputPolygon ( pts:Array <Point>, kind:PolyKind ):Void {
