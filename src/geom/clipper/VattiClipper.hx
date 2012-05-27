@@ -502,10 +502,10 @@ class VattiClipper {
 			 * weren't processed in pair so they could be not connected appropriately or we might have
 			 * missed local extremum settled in the first vertex. Also first or last edge might be
 			 * horizontal with wrong orientation which must be fixed.
-			 * Following cases illustrated in document "/doc/initLmlAndSbl connect first and last edge cases.svg"
-			 * and code refers to illustrations using comments in form [Case #].
-			 * firstEdge may not be null because 1-point polygon was already discarded.*/
+			 * Following cases illustrated in document "/doc/initLmlAndSbl connect first and last edge cases.svg".
+			 * Code refers to illustrations using comments in form [Case #].*/
 			
+			/* firstEdge may not be null because it was only possible in 1-point polygon.*/
 			/* Note that at this point prevEdge contains last edge
 			 * and p0 coincides with first point of the polygon. */
 			lastEdge = prevEdge;
@@ -1041,7 +1041,7 @@ class VattiClipper {
 			e1Node = e1Node.next;
 		}
 		
-		buildApexIntersections ( selLeft, selRight, yt );
+		buildApexIntersections ( selLeft, selRight, yt, true );
 	}
 	
 	private function buildHorizontalIntersectionList ( yb:Float ):Void {
@@ -1093,7 +1093,7 @@ class VattiClipper {
 			e1Node = e1Node.next;
 		}
 		
-		buildApexIntersections ( selLeft, selRight, yb );
+		buildApexIntersections ( selLeft, selRight, yb, false );
 	}
 	
 	/**
@@ -1102,15 +1102,21 @@ class VattiClipper {
 	 * @param	selLeft	First element of Sorted Edge List.
 	 * @param	selRight	Last element of Sorted Edge List.
 	 * @param	yt	Y-coordinate of top of the scanbeam.
+	 * @param	skipHorizontalPair	Should we skip terminating edge when its pairing edge is horizontal?
 	 */
-	private function buildApexIntersections ( selLeft:DoublyList <ActiveEdge>, selRight:DoublyList <ActiveEdge>, yt:Float ):Void {
+	private function buildApexIntersections ( selLeft:DoublyList <ActiveEdge>, selRight:DoublyList <ActiveEdge>, yt:Float, skipHorizontalPair:Bool ):Void {
 		do {
 			if ( selLeft.value.edge.topY == yt && selLeft.value.edge.successor.isLocalMinima () ) {
 				var lMin = cast ( selLeft.value.edge.successor, LocalMinima );
 				var otherEdge:Edge = selLeft.value.edge == lMin.edge2 ? lMin.edge1 : lMin.edge2;
 				
-				// TODO: when buildApexIntersections () called from buildIntersectionList (), it is only necessary
-				// to check whether otherEdge is horizontal in order to skip edge.
+				if ( skipHorizontalPair && otherEdge.isHorizontal ) {
+					/* When buildApexIntersections () called from buildIntersectionList (), it is only necessary
+					 * to check whether otherEdge is horizontal in order to skip edge. */
+					selLeft = selLeft.next;
+					
+					continue;
+				}
 				
 				// Find selNode pointing to other edge ending at local minima
 				selRight = selLeft.next;

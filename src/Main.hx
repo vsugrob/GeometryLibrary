@@ -527,7 +527,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: horizontal edge pairing to terminating edge
+		// Test: horizontal edge pairing to terminating edge
 		var subject = [
 			new Point ( 200, 200 ),
 			new Point ( 400, 200 ),
@@ -542,7 +542,7 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
 		/*// Test: two coincident squares
 		var subject = [
@@ -562,7 +562,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: two shifted squares
+		/*// Test: two shifted squares
 		var subject = [
 			new Point ( 200, 200 ),
 			new Point ( 400, 200 ),
@@ -578,7 +578,7 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: horizontal edge arriving at local maxima
 		// and (possibly) intersecting terminating edges
@@ -599,7 +599,7 @@ class Main {
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*var angle = 0.0;
-		var dAngle = 5;
+		var dAngle = 10;
 		
 		while ( angle <= 45 ) {
 			// Test: coincident edges of different kind
