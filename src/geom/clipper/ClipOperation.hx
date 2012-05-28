@@ -7,7 +7,7 @@ package geom.clipper;
 
 enum ClipOperation {
 	Intersection;
-	Subtraction;
+	Difference;
 	Union;
 	Xor;
 }

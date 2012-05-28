@@ -153,7 +153,7 @@ class Intersection {
 				else /*if ( e2Node.side == Side.Left )*/		// (RS ∩ LC) or (RC ∩ LS) → MX
 					return	IntersectionType.LocalMaxima;
 			}
-		} else if ( clipOp == ClipOperation.Subtraction ) {
+		} else if ( clipOp == ClipOperation.Difference ) {
 			if ( e1Node.side == Side.Left ) {
 				if ( e2Node.side == Side.Left ) {
 					if ( e1Node.kind == PolyKind.Subject /*&& e2Node.kind == PolyKind.Clip*/ )		// (LS - LC) → MN
@@ -178,6 +178,18 @@ class Intersection {
 					else /*if ( e1Node.kind == PolyKind.Subject && e2Node.kind == PolyKind.Clip )*/	// (RS - RC) → MX
 						return	IntersectionType.LocalMaxima;
 				}
+			}
+		} else if ( clipOp == ClipOperation.Union ) {
+			if ( e1Node.side == Side.Left ) {
+				if ( e2Node.side == Side.Left )					// (LC + LS) or (LS + LC) → LI
+					return	IntersectionType.LeftIntermediate;
+				else /*if ( e2Node.side == Side.Right )*/		// (LC + RS) or (LS + RC) → MX
+					return	IntersectionType.LocalMaxima;
+			} else /*if ( e1Node.side == Side.Right )*/ {
+				if ( e2Node.side == Side.Right )				// (RC + RS) or (RS + RC) → RI
+					return	IntersectionType.RightIntermediate;
+				else /*if ( e2Node.side == Side.Left )*/		// (RC + LS) or (RS + LC) → MN
+					return	IntersectionType.LocalMinima;
 			}
 		}
 		

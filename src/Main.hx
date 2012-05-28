@@ -39,7 +39,7 @@ class Main {
 	static var morpher:DebugPolyMorpher;
 	static var clipOp:ClipOperation;
 	
-	static function testRandomPolyClipping ():Void {
+	static function testRandomPolyClipping ( numTestsPerFrame:UInt = 20 ):Void {
 		var stage = Lib.current.stage;
 		var prevTime:Float = Date.now ().getTime ();
 		var numClipsMade:UInt = 0;
@@ -47,41 +47,44 @@ class Main {
 		stage.frameRate = 100;
 		
 		stage.addEventListener ( Event.ENTER_FRAME, function ( e:Event ) {
-			inputPolys = new List <InputPolygon> ();
-			
-			inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( 10, 0, 600 ), PolyKind.Subject ) );
-			inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( 10, 0, 600 ), PolyKind.Clip ) );
-			
-			clipper = new VattiClipper ();
-			
-			for ( inputPoly in inputPolys )
-				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
-			
-			clipper.clip ( clipOp );
-			
-			numClipsMade++;
-			totalClipsMade++;
-			
-			//debugSprite.graphics.clear ();
-			//drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
-			//clipper.drawOutPolys ( debugSprite.graphics );
-			
-			drawCurrentStep ( panAndZoom.zoom );
-			
-			var nowTime:Float = Date.now ().getTime ();
-			var timeDelta:Float = nowTime - prevTime;
-			
-			if ( timeDelta >= 1000 ) {
-				prevTime = nowTime;
-				trace ( "Clips made: " + numClipsMade + ", total: " + totalClipsMade );
-				numClipsMade = 0;
+			for ( i in 0...numTestsPerFrame ) {
+				inputPolys = new List <InputPolygon> ();
+				
+				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( 10, 0, 600 ), PolyKind.Subject ) );
+				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( 10, 0, 600 ), PolyKind.Clip ) );
+				
+				clipper = new VattiClipper ();
+				
+				for ( inputPoly in inputPolys )
+					clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+				
+				clipper.clip ( clipOp );
+				
+				numClipsMade++;
+				totalClipsMade++;
+				
+				//debugSprite.graphics.clear ();
+				//drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
+				//clipper.drawOutPolys ( debugSprite.graphics );
+				
+				//drawCurrentStep ( panAndZoom.zoom );
+				
+				var nowTime:Float = Date.now ().getTime ();
+				var timeDelta:Float = nowTime - prevTime;
+				
+				if ( timeDelta >= 1000 ) {
+					prevTime = nowTime;
+					trace ( "Clips made: " + numClipsMade + ", total: " + totalClipsMade );
+					numClipsMade = 0;
+				}
 			}
 		} );
 	}
 	
 	static function main () {
 		//clipOp = ClipOperation.Intersection;
-		clipOp = ClipOperation.Subtraction;
+		//clipOp = ClipOperation.Difference;
+		clipOp = ClipOperation.Union;
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -99,8 +102,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*testRandomPolyClipping ();
-		return;*/
+		testRandomPolyClipping ();
+		return;
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -515,7 +518,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: several coincident horizontal edges.
+		// Test: several coincident horizontal edges.
 		var subject = [
 			new Point ( 300, 500 ),
 			new Point ( 400, 400 ),
@@ -533,9 +536,9 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
-		// Test: horizontal edge pairing to terminating edge
+		/*// Test: horizontal edge pairing to terminating edge
 		var subject = [
 			new Point ( 200, 200 ),
 			new Point ( 400, 200 ),
@@ -550,7 +553,7 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: penetrating triangles
 		var subject = [
@@ -755,9 +758,9 @@ class Main {
 	private static function rotateClipOperation ():Void {
 		switch ( clipOp ) {
 		case ClipOperation.Intersection:
-			clipOp = ClipOperation.Subtraction;
-		//case ClipOperation.Subtraction:
-			//clipOp = ClipOperation.Union;
+			clipOp = ClipOperation.Difference;
+		case ClipOperation.Difference:
+			clipOp = ClipOperation.Union;
 		default:
 			clipOp = ClipOperation.Intersection;
 		}

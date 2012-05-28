@@ -44,7 +44,7 @@ class VattiClipper {
 	 */
 	private var ilLast:Intersection;
 	/**
-	 * Currently processed clipping operation (Intersection, Subtraction, Union or XOR ).
+	 * Currently processed clipping operation (Intersection, Difference, Union or XOR ).
 	 */
 	private var clipOp:ClipOperation;
 	
@@ -655,12 +655,13 @@ class VattiClipper {
 		
 		if ( clipOp == ClipOperation.Intersection )
 			contribVertex = numUnlikeEdges % 2 == 1;
-		else /*if ( clipOp == ClipOperation.Subtraction )*/ {
+		else if ( clipOp == ClipOperation.Difference ) {
 			if ( numUnlikeEdges % 2 == 0 )
 				contribVertex = kind == PolyKind.Subject;
 			else
 				contribVertex = kind == PolyKind.Clip;
-		}
+		} else /*if ( clipOp == ClipOperation.Union )*/
+			contribVertex = numUnlikeEdges % 2 == 0;
 		
 		var aelNode1 = new ActiveEdge ( edge1, kind );
 		var aelNode2 = new ActiveEdge ( edge2, kind );
@@ -790,7 +791,7 @@ class VattiClipper {
 						var p = new Point ( edge.successor.bottomX, yt );
 						var invertSides:Bool = false;
 						
-						if ( clipOp == ClipOperation.Subtraction && aelNode.kind == PolyKind.Clip )
+						if ( clipOp == ClipOperation.Difference && aelNode.kind == PolyKind.Clip )
 							invertSides = true;
 						
 						if ( ( aelNode.side == Side.Left ) != invertSides )
@@ -904,7 +905,7 @@ class VattiClipper {
 					var p = new Point ( edge.successor.bottomX, edge.topY );
 					var invertSides:Bool = false;
 					
-					if ( clipOp == ClipOperation.Subtraction && aelNode.kind == PolyKind.Clip )
+					if ( clipOp == ClipOperation.Difference && aelNode.kind == PolyKind.Clip )
 						invertSides = true;
 					
 					if ( ( aelNode.side == Side.Left ) != invertSides )
@@ -955,7 +956,7 @@ class VattiClipper {
 	private inline function addLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void {
 		var invertSides:Bool = false;
 		
-		if ( clipOp == ClipOperation.Subtraction && aelNode1.kind == PolyKind.Clip )
+		if ( clipOp == ClipOperation.Difference && aelNode1.kind == PolyKind.Clip )
 			invertSides = true;
 		
 		if ( ( aelNode1.side == Side.Left ) != invertSides )
@@ -1268,7 +1269,7 @@ class VattiClipper {
 					isec.calculateIntersectionPoint ( yb, dy );
 					var invertSides:Bool = false;
 					
-					if ( clipOp == ClipOperation.Subtraction && e1Node.kind == PolyKind.Clip )
+					if ( clipOp == ClipOperation.Difference && e1Node.kind == PolyKind.Clip )
 						invertSides = true;
 					
 					if ( ( e1Node.side == Side.Left ) != invertSides ) {
@@ -1290,9 +1291,15 @@ class VattiClipper {
 				
 				switch ( isecType ) {
 				case IntersectionType.LeftIntermediate:
-					addLeft ( e2Node, isec.p );
+					if ( clipOp == ClipOperation.Union )
+						addLeft ( e1Node, isec.p );
+					else
+						addLeft ( e2Node, isec.p );
 				case IntersectionType.RightIntermediate:
-					addRight ( e1Node, isec.p );
+					if ( clipOp == ClipOperation.Union )
+						addRight ( e2Node, isec.p );
+					else
+						addRight ( e1Node, isec.p );
 				case IntersectionType.LocalMinima:
 					addLocalMin ( e1Node, e2Node, isec.p );
 					e1Node.contributing = false;
