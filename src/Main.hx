@@ -83,8 +83,9 @@ class Main {
 	
 	static function main () {
 		//clipOp = ClipOperation.Intersection;
-		clipOp = ClipOperation.Difference;
+		//clipOp = ClipOperation.Difference;
 		//clipOp = ClipOperation.Union;
+		clipOp = ClipOperation.Xor;
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -518,7 +519,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: several coincident horizontal edges.
+		// Test: several coincident horizontal edges.
 		var subject = [
 			new Point ( 300, 500 ),
 			new Point ( 400, 400 ),
@@ -536,9 +537,9 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
-		// Test: horizontal edge pairing to terminating edge
+		/*// Test: horizontal edge pairing to terminating edge
 		var subject = [
 			new Point ( 200, 200 ),
 			new Point ( 400, 200 ),
@@ -553,7 +554,63 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: one diamond standing next to other
+		var subject = [
+			new Point ( 100, 0 ),
+			new Point ( 200, 100 ),
+			new Point ( 100, 200 ),
+			new Point ( 0, 100 ),
+		];
+		
+		var clip = [
+			new Point ( 200, 0 ),
+			new Point ( 300, 100 ),
+			new Point ( 200, 200 ),
+			new Point ( 100, 100 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: one diamond above the other
+		var subject = [
+			new Point ( 100, 0 ),
+			new Point ( 200, 100 ),
+			new Point ( 100, 200 ),
+			new Point ( 0, 100 ),
+		];
+		
+		var clip = [
+			new Point ( 100, 100 ),
+			new Point ( 200, 200 ),
+			new Point ( 0, 400 ),
+			new Point ( 100, 500 ),
+			new Point ( 200, 400 ),
+			new Point ( 0, 200 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: one diamond germinating through the other
+		var subject = [
+			new Point ( 200, 0 ),
+			new Point ( 300, 100 ),
+			new Point ( 200, 200 ),
+			new Point ( 100, 100 ),
+		];
+		
+		var clip = [
+			new Point ( 200, 50 ),
+			new Point ( 400, 100 ),
+			new Point ( 200, 150 ),
+			new Point ( 0, 100 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: penetrating triangles
 		var subject = [
@@ -566,6 +623,22 @@ class Main {
 			new Point ( 300, 300 ),
 			new Point ( 100, 100 ),
 			new Point ( 500, 110 ),
+		];
+		
+		addInputPolygon ( subject, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: horizontally penetrating triangles
+		var subject = [
+			new Point ( 0, 0 ),
+			new Point ( 300, 100 ),
+			new Point ( 0, 200 ),
+		];
+		
+		var clip = [
+			new Point ( 100, 140 ),
+			new Point ( 250, 10 ),
+			new Point ( 250, 125 ),
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
@@ -752,6 +825,8 @@ class Main {
 				trace ( clipOp );
 			} else if ( kb.keyCode == 75 )	// k
 				switchPolyKinds ();
+			else if ( kb.keyCode == 72 )	// h
+				hideInputPolys = !hideInputPolys;
 		} );
 	}
 	
@@ -761,6 +836,8 @@ class Main {
 			clipOp = ClipOperation.Difference;
 		case ClipOperation.Difference:
 			clipOp = ClipOperation.Union;
+		case ClipOperation.Union:
+			clipOp = ClipOperation.Xor;
 		default:
 			clipOp = ClipOperation.Intersection;
 		}
@@ -776,12 +853,16 @@ class Main {
 		inputPolys.add ( new InputPolygon ( pts, kind ) );
 	}
 	
+	private static var hideInputPolys:Bool;
+	
 	private static function drawCurrentStep ( zoom:Float = 1.0 ):Void {
 		if ( zoom < 1 )
 			zoom = 1;
 		
 		debugSprite.graphics.clear ();
-		drawInputPolys ( debugSprite.graphics, zoom );
+		
+		if ( !hideInputPolys )
+			drawInputPolys ( debugSprite.graphics, zoom );
 		
 		clipper.drawCurrentScanbeam ( debugSprite.graphics, zoom );
 		clipper.drawIntersectionScanline ( debugSprite.graphics, zoom );

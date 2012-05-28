@@ -666,9 +666,12 @@ class VattiClipper {
 				likeEdgesEven = numLikeEdges % 2 == 0;
 			else
 				likeEdgesEven = numLikeEdges % 2 == 1;	// Invert sides
-		} else /*if ( clipOp == ClipOperation.Union )*/ {
+		} else if ( clipOp == ClipOperation.Union ) {
 			likeEdgesEven = numLikeEdges % 2 == 0;
 			contribVertex = numUnlikeEdges % 2 == 0;
+		} else /*if ( clipOp == ClipOperation.Xor )*/ {
+			likeEdgesEven = ( numLikeEdges % 2 == 0 ) == ( numUnlikeEdges % 2 == 0 );
+			contribVertex = true;
 		}
 		
 		var aelNode1 = new ActiveEdge ( edge1, kind );
@@ -1255,6 +1258,7 @@ class VattiClipper {
 			// e1Node precedes e2Node in AEL
 			var e1Node = isec.e1Node;
 			var e2Node = isec.e2Node;
+			var tmpSide:Side;
 			
 			if ( e1Node.kind == e2Node.kind ) {
 				/* Like edge intersection:
@@ -1273,34 +1277,52 @@ class VattiClipper {
 				}
 				
 				// Exchange side values of edges
-				var tmpSide = e1Node.side;
+				tmpSide = e1Node.side;
 				e1Node.side = e2Node.side;
 				e2Node.side = tmpSide;
 			} else {
 				isec.calculateIntersectionPoint ( yb, dy );
-				var isecType = isec.classify ( clipOp );
 				
-				switch ( isecType ) {
-				case IntersectionType.LeftIntermediate:
-					if ( clipOp == ClipOperation.Union )
+				if ( clipOp != ClipOperation.Xor ) {
+					var isecType = isec.classify ( clipOp );
+					
+					switch ( isecType ) {
+					case IntersectionType.LeftIntermediate:
+						if ( clipOp == ClipOperation.Union )
+							addLeft ( e1Node, isec.p );
+						else
+							addLeft ( e2Node, isec.p );
+					case IntersectionType.RightIntermediate:
+						if ( clipOp == ClipOperation.Union )
+							addRight ( e2Node, isec.p );
+						else
+							addRight ( e1Node, isec.p );
+					case IntersectionType.LocalMinima:
+						addLocalMin ( e1Node, e2Node, isec.p );
+						e1Node.contributing = false;
+						e2Node.contributing = false;
+						e1Node.poly = null;
+						e2Node.poly = null;
+					case IntersectionType.LocalMaxima:
+						addLocalMax ( e1Node, e2Node, isec.p );
+						e1Node.contributing = true;
+						e2Node.contributing = true;
+					}
+				} else {
+					if ( e1Node.side == Side.Left )
 						addLeft ( e1Node, isec.p );
 					else
-						addLeft ( e2Node, isec.p );
-				case IntersectionType.RightIntermediate:
-					if ( clipOp == ClipOperation.Union )
-						addRight ( e2Node, isec.p );
-					else
 						addRight ( e1Node, isec.p );
-				case IntersectionType.LocalMinima:
-					addLocalMin ( e1Node, e2Node, isec.p );
-					e1Node.contributing = false;
-					e2Node.contributing = false;
-					e1Node.poly = null;
-					e2Node.poly = null;
-				case IntersectionType.LocalMaxima:
-					addLocalMax ( e1Node, e2Node, isec.p );
-					e1Node.contributing = true;
-					e2Node.contributing = true;
+					
+					if ( e2Node.side == Side.Left )
+						addLeft ( e2Node, isec.p );
+					else
+						addRight ( e2Node, isec.p );
+					
+					// Exchange side values of edges
+					tmpSide = e1Node.side;
+					e1Node.side = e2Node.side;
+					e2Node.side = tmpSide;
 				}
 			}
 			

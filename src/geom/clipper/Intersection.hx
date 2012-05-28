@@ -177,8 +177,8 @@ class Intersection {
 				else /*if ( e2Node.side == Side.Left )*/		// (RC + LS) or (RS + LC) → MN
 					return	IntersectionType.LocalMinima;
 			}
+		} else /*if ( clipOp == ClipOperation.Xor )*/ {
+			throw "Argument clipOp value of ClipOperation.Xor is not acceptable by classify ( clipOp:ClipOperation ):IntersectionType function.";
 		}
-		
-		return	null;	// I just put it here until all ops will be implemented.
 	}
 }
