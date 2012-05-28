@@ -83,8 +83,8 @@ class Main {
 	
 	static function main () {
 		//clipOp = ClipOperation.Intersection;
-		//clipOp = ClipOperation.Difference;
-		clipOp = ClipOperation.Union;
+		clipOp = ClipOperation.Difference;
+		//clipOp = ClipOperation.Union;
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -102,8 +102,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		testRandomPolyClipping ();
-		return;
+		/*testRandomPolyClipping ();
+		return;*/
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -518,7 +518,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: several coincident horizontal edges.
+		/*// Test: several coincident horizontal edges.
 		var subject = [
 			new Point ( 300, 500 ),
 			new Point ( 400, 400 ),
@@ -536,9 +536,9 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: horizontal edge pairing to terminating edge
+		// Test: horizontal edge pairing to terminating edge
 		var subject = [
 			new Point ( 200, 200 ),
 			new Point ( 400, 200 ),
@@ -553,7 +553,7 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
 		/*// Test: penetrating triangles
 		var subject = [
