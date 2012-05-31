@@ -41,6 +41,11 @@ class ActiveEdge {
 	 * Pointer to partial polygon associated to the edge.
 	 */
 	public var poly:ChainedPolygon;
+	/**
+	 * Precasted reference to this instance as ActiveWindingEdge. If this is
+	 * not an ActiveWindingEdge, this property will contain null.
+	 */
+	public var asWindingEdge:ActiveWindingEdge;
 	
 	public function new ( edge:Edge, kind:PolyKind, prev:ActiveEdge = null, next:ActiveEdge = null ) {
 		this.edge = edge;

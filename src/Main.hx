@@ -30,6 +30,14 @@ import geom.clipper.ClipOperation;
  * ...
  * @author vsugrob
  */
+class C1 {
+	public function new () {}
+}
+class C2 extends C1 {
+	public function new () {
+		super ();
+	}
+}
 
 class Main {
 	static var clipper:VattiClipper;

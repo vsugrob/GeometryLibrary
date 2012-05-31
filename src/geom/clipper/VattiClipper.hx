@@ -48,7 +48,24 @@ class VattiClipper {
 	 */
 	private var clipOp:ClipOperation;
 	
-	public function new () {
+	/**
+	 * Fill rule used for PolyKind.Subject polygons.
+	 */
+	private var subjectFill:PolyFill;
+	/**
+	 * Fill rule used for PolyKind.Clip polygons.
+	 */
+	private var clipFill:PolyFill;
+	/**
+	 * Whether one of the fills ( subjectFill or clipFill ) uses winding rule.
+	 */
+	private var thereIsWindingFill:Bool;
+	
+	public inline function getFillRule ( kind:PolyKind ):PolyFill {
+		return	kind == PolyKind.Subject ? subjectFill : clipFill;
+	}
+	
+	public inline function new () {
 		this.outPolys = new List <ChainedPolygon> ();
 		this.clipperState = ClipperState.NotStarted; // DEBUG
 	}
@@ -67,6 +84,14 @@ class VattiClipper {
 		initLmlAndSbl ( poly, kind );
 	}
 	
+	public function setFillRules ( subjectFill:PolyFill, clipFill:PolyFill ):Void {
+		if ( this.subjectFill != subjectFill || this.clipFill != clipFill )
+			clear ();
+		
+		this.subjectFill = subjectFill;
+		this.clipFill = clipFill;
+	}
+	
 	/**
 	 * Clears added polygons and all data that was accumulated during last clip operation.
 	 */
@@ -74,15 +99,21 @@ class VattiClipper {
 		lml = null;
 		sbl = null;
 		ael = null;
+		hel = null;
 		outPolys = new List <ChainedPolygon> ();
 		il = null;
+		ilLast = null;
 	}
 	
-	public function clip ( operation:ClipOperation ):Void {
+	public function clip ( operation:ClipOperation, subjectFill:PolyFill = null, clipFill:PolyFill = null ):Void {
 		if ( sbl == null )	// Scanbeam list is empty
 			return;
 		
 		this.clipOp = operation;
+		this.subjectFill = subjectFill == null ? PolyFill.EvenOdd : subjectFill;
+		this.clipFill = clipFill == null ? PolyFill.EvenOdd : clipFill;
+		this.thereIsWindingFill = this.subjectFill != PolyFill.EvenOdd || this.clipFill != PolyFill.EvenOdd;
+		
 		var yb = popScanbeam ();	// Bottom of current scanbeam
 		
 		do {
@@ -274,7 +305,7 @@ class VattiClipper {
 	}
 	// </clipStep>
 	
-	private function initLmlAndSbl ( pts:Iterable <Point>, polyKind:PolyKind ):Void {
+	private function initLmlAndSbl ( pts:Iterable <Point>, kind:PolyKind ):Void {
 		var it:Iterator <Point> = pts.iterator ();
 		
 		if ( !it.hasNext () )
@@ -407,10 +438,12 @@ class VattiClipper {
 			
 			// Add local minima and local maxima
 			if ( isIncreasing ) {
-				addLocalMaxima ( lastEdge, prevEdge, pLast.y, polyKind );
-				addLocalMinima ( lastEdge, firstEdge, pFirst.x, pFirst.y );
+				// prevEdge : increasing, lastEdge : decreasing, firstEdge : increasing
+				addLocalMaxima ( prevEdge, lastEdge, pLast.y, kind );
+				addLocalMinima ( firstEdge, lastEdge, pFirst.x, pFirst.y );
 			} else {
-				addLocalMaxima ( lastEdge, firstEdge, pFirst.y, polyKind );
+				// prevEdge : decreasing, lastEdge : increasing, firstEdge : decreasing
+				addLocalMaxima ( lastEdge, firstEdge, pFirst.y, kind );
 				addLocalMinima ( lastEdge, prevEdge, pLast.x, pLast.y );
 			}
 		} else {	// Ordinary polygon
@@ -457,15 +490,15 @@ class VattiClipper {
 							edge.successor = prevEdge;
 						else
 							prevEdge.successor = edge;
-					} else if ( prevDy > 0 && dy < 0 )	// We got local maxima
-						addLocalMaxima ( prevEdge, edge, p0.y, polyKind );
-					else {								// We got local minima
+					} else if ( prevDy > 0 && dy < 0 )		// We got local maxima
+						addLocalMaxima ( prevEdge, edge, p0.y, kind );
+					else /*if ( prevDy < 0 && dy > 0 )*/ {	// We got local minima
 						lastJointIsLocalMimima = true;
 						
 						if ( firstJointIsLocalMimima == null )
 							firstJointIsLocalMimima = true;
 						
-						addLocalMinima ( prevEdge, edge, p0.x, p0.y );
+						addLocalMinima ( edge, prevEdge, p0.x, p0.y );
 					}
 					
 					if ( firstJointIsLocalMimima == null )
@@ -523,7 +556,7 @@ class VattiClipper {
 				if ( lastEdge.successor == null ) {
 					if ( firstJointIsLocalMimima ) {
 						if ( lastJointIsLocalMimima )
-							addLocalMaxima ( lastEdge, firstEdge, p0.y, polyKind );	// [Case 1]
+							addLocalMaxima ( lastEdge, firstEdge, p0.y, kind );	// [Case 1]
 						else
 							lastEdge.successor = firstEdge;	// [Case 2]
 					} else if ( lastJointIsLocalMimima ) {
@@ -538,11 +571,11 @@ class VattiClipper {
 							// Pure local minimum, [Case 4]
 						}
 						
-						addLocalMinima ( lastEdge, firstEdge, p0.x, p0.y );
+						addLocalMinima ( firstEdge, lastEdge, p0.x, p0.y );
 					}
 				} else {
 					if ( firstJointIsLocalMimima ) {
-						addLocalMaxima ( lastEdge, firstEdge, p0.y, polyKind );	// [Case 5]
+						addLocalMaxima ( lastEdge, firstEdge, p0.y, kind );	// [Case 5]
 						
 						if ( lastEdge.isHorizontal )
 							reverseHorizontalEdge ( lastEdge );	// [Case 5 subcase]
@@ -556,17 +589,17 @@ class VattiClipper {
 			} else {
 				if ( lastEdge.successor == null ) {
 					if ( lastJointIsLocalMimima )
-						addLocalMaxima ( lastEdge, firstEdge, p0.y, polyKind );	// [Case 7]
+						addLocalMaxima ( lastEdge, firstEdge, p0.y, kind );	// [Case 7]
 					else
 						lastEdge.successor = firstEdge;	// [Case 8]
 				} else	// Local maximum
-					addLocalMaxima ( lastEdge, firstEdge, p0.y, polyKind );	// [Case 9]
+					addLocalMaxima ( lastEdge, firstEdge, p0.y, kind );	// [Case 9]
 			}
 		}
 	}
 	
-	private inline function addLocalMaxima ( edge1:Edge, edge2:Edge, y:Float, polyKind:PolyKind ):Void {
-		var lm = new LocalMaxima ( edge1, edge2, y, polyKind );
+	private inline function addLocalMaxima ( edge1:Edge, edge2:Edge, y:Float, kind:PolyKind ):Void {
+		var lm = new LocalMaxima ( edge1, edge2, y, kind );
 		
 		if ( lml == null )
 			lml = lm;
@@ -628,22 +661,28 @@ class VattiClipper {
 	/**
 	 * Add edges edge1 and edge2 (or their nonhorizontal successors) to active edge list maintaining increasing x order.
 	 * Also set side and contributing fields of edge1 and edge2 using a parity argument.
-	 * @param	edge1
-	 * @param	edge2
-	 * @param	yb
-	 * @param	kind
+	 * @param	edge1	Increasing edge.
+	 * @param	edge2	Decreasing edge.
+	 * @param	yb		Bottom of the scanbeam.
+	 * @param	kind	Whether edges belong to subject or clip polygon?
 	 */
 	private function addEdgesToAel ( edge1:Edge, edge2:Edge, yb:Float, kind:PolyKind ):Void {
+		var fill = getFillRule ( kind );
+		
 		// Calculate parity
 		var numLikeEdges:Int = 0;
 		var numUnlikeEdges:Int = 0;
+		var windingSum:Int = 0;
 		var aelNode = ael;
 		var prevAelNode:ActiveEdge = null;
 		
 		while ( aelNode != null && aelNode.bottomXIntercept < edge1.bottomX ) {
-			if ( aelNode.kind == kind )
+			if ( aelNode.kind == kind ) {
 				numLikeEdges++;
-			else
+				
+				if ( fill == PolyFill.NonZero )
+					windingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+			} else
 				numUnlikeEdges++;
 			
 			prevAelNode = aelNode;
@@ -674,8 +713,20 @@ class VattiClipper {
 			contribVertex = true;
 		}
 		
-		var aelNode1 = new ActiveEdge ( edge1, kind );
-		var aelNode2 = new ActiveEdge ( edge2, kind );
+		var aelNode1:ActiveEdge, aelNode2:ActiveEdge;
+		var aelWinNode1:ActiveWindingEdge, aelWinNode2:ActiveWindingEdge;
+		
+		if ( fill == PolyFill.EvenOdd ) {
+			aelNode1 = new ActiveEdge ( edge1, kind );
+			aelNode2 = new ActiveEdge ( edge2, kind );
+		} else /*if ( fill == PolyFill.NonZero )*/ {
+			aelWinNode1 = new ActiveWindingEdge ( edge1, kind );
+			aelWinNode2 = new ActiveWindingEdge ( edge2, kind );
+			aelWinNode1.winding = 1;
+			aelWinNode2.winding = -1;
+			aelNode1 = aelWinNode1;
+			aelNode2 = aelWinNode2;
+		}
 		
 		aelNode1.bottomXIntercept = edge1.bottomX;
 		aelNode2.bottomXIntercept = edge1.bottomX;
@@ -732,6 +783,25 @@ class VattiClipper {
 		
 		if ( ael == null || ael.prev != null )
 			ael = aelNode1;
+		
+		if ( fill == PolyFill.NonZero ) {
+			// At this point order of aelNode1 and aelNode2 could be changed
+			aelWinNode1 = cast ( aelNode1, ActiveWindingEdge );
+			aelWinNode2 = cast ( aelNode2, ActiveWindingEdge );
+			
+			aelWinNode1.windingSum = windingSum + aelWinNode1.winding;
+			aelWinNode2.windingSum = aelWinNode1.windingSum + aelWinNode2.winding;
+			
+			if ( aelWinNode1.windingSum == 0 || aelWinNode2.windingSum == 0 ) {
+				// If one windingSum is zero then other is either +1 or -1
+				aelWinNode1.isGhost = false;
+				aelWinNode2.isGhost = false;
+			} else {
+				aelWinNode1.isGhost = true;
+				aelWinNode2.isGhost = true;
+				contribVertex = false;
+			}
+		}
 		
 		if ( contribVertex )
 			addLocalMax ( aelNode1, aelNode2, new Point ( edge1.bottomX, yb ) );
@@ -1256,24 +1326,46 @@ class VattiClipper {
 			}
 			
 			// e1Node precedes e2Node in AEL
-			var e1Node = isec.e1Node;
-			var e2Node = isec.e2Node;
+			var e1Node:ActiveEdge = isec.e1Node;
+			var e2Node:ActiveEdge = isec.e2Node;
 			var tmpSide:Side;
 			
 			if ( e1Node.kind == e2Node.kind ) {
-				/* Like edge intersection:
-				 * (LC ∩ RC) or (RC ∩ LC) → LI and RI
-				 * (LS ∩ RS) or (RS ∩ LS) → LI and RI */
-				if ( e1Node.contributing ) {			// Then e2Node is contributing also
-					isec.calculateIntersectionPoint ( yb, dy );
-					
-					if ( e1Node.side == Side.Left ) {
-						addLeft ( e1Node, isec.p );
-						addRight ( e2Node, isec.p );
-					} else {
-						addLeft ( e2Node, isec.p );
-						addRight ( e1Node, isec.p );
+				var fill = getFillRule ( e1Node.kind );
+				
+				if ( fill == PolyFill.EvenOdd ) {
+					/* Like edge intersection:
+					 * (LC × RC) or (RC × LC) → LI and RI
+					 * (LS × RS) or (RS × LS) → LI and RI */
+					if ( e1Node.contributing ) {			// Then e2Node is contributing also
+						isec.calculateIntersectionPoint ( yb, dy );
+						
+						if ( e1Node.side == Side.Left ) {
+							addLeft ( e1Node, isec.p );
+							addRight ( e2Node, isec.p );
+						} else {
+							addLeft ( e2Node, isec.p );
+							addRight ( e1Node, isec.p );
+						}
 					}
+				} else /*if ( fill == PolyFill.NonZero )*/ {
+					var e1WinNode = e1Node.asWindingEdge;
+					var e2WinNode = e2Node.asWindingEdge;
+					var ws1:Int = AbsInt ( e1WinNode.windingSum );
+					var ws2:Int = AbsInt ( e2WinNode.windingSum );
+					// WARNING: taking abs value is wrong approach... investigate further.
+					
+					// Classify self-intersection
+					if ( ws1 == 0 ) {			// 0 × 1 → MN
+						
+					} else if ( ws1 == 1 ) {	// (1 × 0) or (1 × 2) → (L/R)I
+						
+					} else if ( ws1 == 2 ) {	// 2 × 1 → MX
+						
+					}
+					
+					e1WinNode.windingSum = e2WinNode.windingSum;
+					e2WinNode.windingSum -= e1WinNode.winding;
 				}
 				
 				// Exchange side values of edges
@@ -1281,48 +1373,55 @@ class VattiClipper {
 				e1Node.side = e2Node.side;
 				e2Node.side = tmpSide;
 			} else {
-				isec.calculateIntersectionPoint ( yb, dy );
+				// Check whether any of the edges is a ghost
+				var thereIsGhost:Bool = thereIsWindingFill &&
+					( ( e1Node.asWindingEdge != null && e1Node.asWindingEdge.isGhost ) ||
+					  ( e2Node.asWindingEdge != null && e2Node.asWindingEdge.isGhost ) );
 				
-				if ( clipOp != ClipOperation.Xor ) {
-					var isecType = isec.classify ( clipOp );
+				if ( !thereIsGhost ) {
+					isec.calculateIntersectionPoint ( yb, dy );
 					
-					switch ( isecType ) {
-					case IntersectionType.LeftIntermediate:
-						if ( clipOp == ClipOperation.Union )
+					if ( clipOp != ClipOperation.Xor ) {
+						var isecType = isec.classify ( clipOp );
+						
+						switch ( isecType ) {
+						case IntersectionType.LeftIntermediate:
+							if ( clipOp == ClipOperation.Union )
+								addLeft ( e1Node, isec.p );
+							else
+								addLeft ( e2Node, isec.p );
+						case IntersectionType.RightIntermediate:
+							if ( clipOp == ClipOperation.Union )
+								addRight ( e2Node, isec.p );
+							else
+								addRight ( e1Node, isec.p );
+						case IntersectionType.LocalMinima:
+							addLocalMin ( e1Node, e2Node, isec.p );
+							e1Node.contributing = false;
+							e2Node.contributing = false;
+							e1Node.poly = null;
+							e2Node.poly = null;
+						case IntersectionType.LocalMaxima:
+							addLocalMax ( e1Node, e2Node, isec.p );
+							e1Node.contributing = true;
+							e2Node.contributing = true;
+						}
+					} else {
+						if ( e1Node.side == Side.Left )
 							addLeft ( e1Node, isec.p );
 						else
-							addLeft ( e2Node, isec.p );
-					case IntersectionType.RightIntermediate:
-						if ( clipOp == ClipOperation.Union )
-							addRight ( e2Node, isec.p );
-						else
 							addRight ( e1Node, isec.p );
-					case IntersectionType.LocalMinima:
-						addLocalMin ( e1Node, e2Node, isec.p );
-						e1Node.contributing = false;
-						e2Node.contributing = false;
-						e1Node.poly = null;
-						e2Node.poly = null;
-					case IntersectionType.LocalMaxima:
-						addLocalMax ( e1Node, e2Node, isec.p );
-						e1Node.contributing = true;
-						e2Node.contributing = true;
+						
+						if ( e2Node.side == Side.Left )
+							addLeft ( e2Node, isec.p );
+						else
+							addRight ( e2Node, isec.p );
+						
+						// Exchange side values of edges
+						tmpSide = e1Node.side;
+						e1Node.side = e2Node.side;
+						e2Node.side = tmpSide;
 					}
-				} else {
-					if ( e1Node.side == Side.Left )
-						addLeft ( e1Node, isec.p );
-					else
-						addRight ( e1Node, isec.p );
-					
-					if ( e2Node.side == Side.Left )
-						addLeft ( e2Node, isec.p );
-					else
-						addRight ( e2Node, isec.p );
-					
-					// Exchange side values of edges
-					tmpSide = e1Node.side;
-					e1Node.side = e2Node.side;
-					e2Node.side = tmpSide;
 				}
 			}
 			
@@ -1348,6 +1447,10 @@ class VattiClipper {
 			else
 				prevIsec.next = isec.next;
 		}
+	}
+	
+	private static inline function AbsInt ( value:Int ):Int {
+		return	value < 0 ? -value : value;
 	}
 	
 	private static function getRandomColor ():UInt {

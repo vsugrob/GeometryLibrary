@@ -1,6 +1,5 @@
 package ;
 import flash.geom.Point;
-import geom.ChainedPolygon;
 import geom.clipper.PolyKind;
 
 /**
@@ -9,10 +8,10 @@ import geom.clipper.PolyKind;
  */
 
 class InputPolygon {
-	public var pts:Array <Point>;
+	public var pts:Iterable <Point>;
 	public var kind:PolyKind;
 	
-	public function new ( pts:Array <Point>, kind:PolyKind ) {
+	public function new ( pts:Iterable <Point>, kind:PolyKind ) {
 		this.pts = pts;
 		this.kind = kind;
 	}
