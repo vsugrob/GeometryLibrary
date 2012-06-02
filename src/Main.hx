@@ -97,10 +97,10 @@ class Main {
 	static function main () {
 		forceOneClip = true;
 		
-		//clipOp = ClipOperation.Intersection;
+		clipOp = ClipOperation.Intersection;
 		//clipOp = ClipOperation.Difference;
 		//clipOp = ClipOperation.Union;
-		clipOp = ClipOperation.Xor;
+		//clipOp = ClipOperation.Xor;
 		
 		subjectFill = PolyFill.NonZero;
 		clipFill = PolyFill.NonZero;
@@ -163,7 +163,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: two clip polygons
+		/*// Test: two clip polygons
 		var subject = [
 			new Point ( 0, 100 ),
 			new Point ( 100, 250 ),
@@ -186,7 +186,7 @@ class Main {
 		
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( clip2, PolyKind.Clip );
+		addInputPolygon ( clip2, PolyKind.Clip );*/
 		
 		
 		/*// Test: self-intersections with even-odd rule (vatti clip classic behavior)
@@ -824,7 +824,7 @@ class Main {
 		clipOp = ClipOperation.Union;*/
 		
 		
-		/*var angle = 0.0;
+		var angle = 0.0;
 		var dAngle = 10;
 		
 		while ( angle <= 45 ) {
@@ -876,7 +876,7 @@ class Main {
 			//}
 			
 			angle += dAngle;
-		}*/
+		}
 		
 		morpher = new DebugPolyMorpher ( inputPolys, 20 );
 		//morpher.stopped = true;

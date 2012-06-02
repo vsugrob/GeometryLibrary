@@ -1465,44 +1465,74 @@ class VattiClipper {
 						var insideThis:Bool, insideOther:Bool;
 						var numLikeEdges:Int = 0;
 						var numUnlikeEdges:Int = 0;
-						var thisWindingSum:Null <Int> = null;
-						var otherWindingSum:Null <Int> = null;
+						var thisWindingSum:Int = 0;
+						var otherWindingSum:Int = 0;
 						var aelNode = e1Node.prev;
 						
-						// TODO: we calculate numLikeEdges and numUnlikeEdges even when
-						// thisFill and otherFill is not PolyFill.EvenOdd
-						// which is unnecessary waste of computing power.
-						while ( aelNode != null ) {
-							if ( aelNode.kind == thisKind ) {
-								numLikeEdges++;
+						if ( thisFill == PolyFill.EvenOdd ) {
+							if ( otherFill == PolyFill.EvenOdd ) {
+								while ( aelNode != null ) {
+									if ( aelNode.kind == thisKind )
+										numLikeEdges++;
+									else
+										numUnlikeEdges++;
+									
+									aelNode = aelNode.prev;
+								}
 								
-								if ( thisWindingSum == null && thisFill == PolyFill.NonZero )
-									thisWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
-							} else {
-								numUnlikeEdges++;
+								insideOther = numUnlikeEdges % 2 == 1;
+							} else /*if ( otherFill == PolyFill.NonZero )*/ {
+								while ( aelNode != null ) {
+									if ( aelNode.kind == thisKind )
+										numLikeEdges++;
+									else {
+										otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+										aelNode = aelNode.prev;
+										
+										break;
+									}
+									
+									aelNode = aelNode.prev;
+								}
 								
-								if ( otherWindingSum == null && otherFill == PolyFill.NonZero )
-									otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+								while ( aelNode != null ) {
+									if ( aelNode.kind == thisKind )
+										numLikeEdges++;
+									
+									aelNode = aelNode.prev;
+								}
+								
+								insideOther = otherWindingSum != 0;
 							}
 							
-							aelNode = aelNode.prev;
-						}
-						
-						if ( thisWindingSum == null )
-							thisWindingSum = 0;
-						
-						if ( otherWindingSum == null )
-							otherWindingSum = 0;
-						
-						if ( thisFill == PolyFill.EvenOdd )
 							insideThis = numLikeEdges % 2 == 1;
-						else /*if ( thisFill == PolyFill.NonZero )*/
-							insideThis = thisWindingSum != 0;
+						} else /*if ( thisFill == PolyFill.NonZero )*/ {
+							if ( otherFill == PolyFill.EvenOdd ) {
+								while ( aelNode != null ) {
+									if ( aelNode.kind == otherKind )
+										numUnlikeEdges++;
+									
+									aelNode = aelNode.prev;
+								}
+								
+								insideOther = numUnlikeEdges % 2 == 1;
+							} else /*if ( otherFill == PolyFill.NonZero )*/ {
+								while ( aelNode != null ) {
+									if ( aelNode.kind == otherKind ) {
+										otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+										
+										break;
+									}
+									
+									aelNode = aelNode.prev;
+								}
+								
+								insideOther = otherWindingSum != 0;
+							}
 							
-						if ( otherFill == PolyFill.EvenOdd )
-							insideOther = numUnlikeEdges % 2 == 1;
-						else /*if ( otherFill == PolyFill.NonZero )*/
-							insideOther = otherWindingSum != 0;
+							thisWindingSum = e1WinNode.windingSum - e1WinNode.winding;
+							insideThis = thisWindingSum != 0;
+						}
 						
 						var likeEdgesEven:Bool;
 						var contribVertex:Bool;
