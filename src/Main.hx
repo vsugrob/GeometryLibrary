@@ -17,6 +17,7 @@ import geom.clipper.ClipperState;
 import geom.clipper.Edge;
 import geom.clipper.LocalMaxima;
 import geom.clipper.LocalMinima;
+import geom.clipper.PolyFill;
 import geom.clipper.PolyKind;
 import geom.clipper.Side;
 import geom.clipper.VattiClipper;
@@ -46,6 +47,10 @@ class Main {
 	static var panAndZoom:PanAndZoom;
 	static var morpher:DebugPolyMorpher;
 	static var clipOp:ClipOperation;
+	static var subjectFill:PolyFill;
+	static var clipFill:PolyFill;
+	static var forceOneClip:Bool;
+	static var randomOuputStrokes:Bool;
 	
 	static function testRandomPolyClipping ( numTestsPerFrame:UInt = 20 ):Void {
 		var stage = Lib.current.stage;
@@ -66,7 +71,7 @@ class Main {
 				for ( inputPoly in inputPolys )
 					clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 				
-				clipper.clip ( clipOp );
+				clipper.clip ( clipOp, subjectFill, clipFill );
 				
 				numClipsMade++;
 				totalClipsMade++;
@@ -90,10 +95,15 @@ class Main {
 	}
 	
 	static function main () {
+		forceOneClip = true;
+		
 		//clipOp = ClipOperation.Intersection;
 		//clipOp = ClipOperation.Difference;
 		//clipOp = ClipOperation.Union;
 		clipOp = ClipOperation.Xor;
+		
+		subjectFill = PolyFill.NonZero;
+		clipFill = PolyFill.NonZero;
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -111,8 +121,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*testRandomPolyClipping ();
-		return;*/
+		testRandomPolyClipping ();
+		return;
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -153,7 +163,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: two clip polygons
+		// Test: two clip polygons
 		var subject = [
 			new Point ( 0, 100 ),
 			new Point ( 100, 250 ),
@@ -176,7 +186,7 @@ class Main {
 		
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( clip2, PolyKind.Clip );*/
+		addInputPolygon ( clip2, PolyKind.Clip );
 		
 		
 		/*// Test: self-intersections with even-odd rule (vatti clip classic behavior)
@@ -527,7 +537,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: several coincident horizontal edges.
+		/*// Test: several coincident horizontal edges.
 		var subject = [
 			new Point ( 300, 500 ),
 			new Point ( 400, 400 ),
@@ -545,7 +555,7 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: horizontal edge pairing to terminating edge
 		var subject = [
@@ -706,6 +716,114 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
+		/*// Test: simple nonzero test
+		var subj1 = [
+			new Point ( 100, 0 ),
+			new Point ( 200, 100 ),
+			new Point ( 100, 200 ),
+			new Point ( 0, 100 ),
+		];
+		
+		subj1.reverse ();
+		
+		var subj2 = [
+			new Point ( 100, 100 ),
+			new Point ( 200, 200 ),
+			new Point ( 100, 300 ),
+			new Point ( 0, 200 ),
+		];
+		
+		subj2.reverse ();
+		
+		var subj3 = [
+			new Point ( 100, -100 ),
+			new Point ( 400, 200 ),
+			new Point ( 100, 500 ),
+			new Point ( -200, 200 ),
+		];
+		
+		addInputPolygon ( subj1, PolyKind.Subject );
+		addInputPolygon ( subj2, PolyKind.Subject );
+		addInputPolygon ( subj3, PolyKind.Subject );
+		subjectFill = PolyFill.NonZero;
+		
+		var clip = [
+			new Point ( 0, 100 ),
+			new Point ( 400, 300 ),
+			new Point ( 300, 100 ),
+		];
+		
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: cross in circle nonzero test
+		var subj1 = [
+			new Point ( 0, 400 ),
+			new Point ( 400, 0 ),
+			new Point ( 500, 100 ),
+			new Point ( 100, 500 ),
+		];
+		
+		var subj2 = [
+			new Point ( 100, 0 ),
+			new Point ( 500, 400 ),
+			new Point ( 400, 500 ),
+			new Point ( 0, 100 ),
+		];
+		
+		subj2.reverse ();
+		
+		var subj3 = [
+			new Point ( -100, -100 ),
+			new Point ( 600, -100 ),
+			new Point ( 600, 600 ),
+			new Point ( -100, 600 ),
+		];
+		
+		addInputPolygon ( subj1, PolyKind.Subject );
+		addInputPolygon ( subj2, PolyKind.Subject );
+		addInputPolygon ( subj3, PolyKind.Subject );
+		subjectFill = PolyFill.NonZero;
+		
+		var clip = [
+			new Point ( 100, 100 ),
+			new Point ( 400, 400 ),
+			new Point ( 400, 100 ),
+		];
+		
+		addInputPolygon ( clip, PolyKind.Clip );*/
+		
+		/*// Test: local maxima insideness test
+		var subj1 = [
+			new Point ( 300, 0 ),
+			new Point ( 600, 300 ),
+			new Point ( 300, 600 ),
+			new Point ( 0, 300 ),
+		];
+		
+		var subj2 = [
+			new Point ( 300, 100 ),
+			new Point ( 500, 300 ),
+			new Point ( 300, 500 ),
+			new Point ( 100, 300 ),
+		];
+		
+		subj2.reverse ();
+		
+		addInputPolygon ( subj1, PolyKind.Subject );
+		addInputPolygon ( subj2, PolyKind.Subject );
+		subjectFill = PolyFill.NonZero;
+		
+		var clip = [
+			new Point ( 300, 200 ),
+			new Point ( 400, 300 ),
+			new Point ( 300, 400 ),
+			new Point ( 200, 300 ),
+		];
+		
+		addInputPolygon ( clip, PolyKind.Clip );
+		clipOp = ClipOperation.Union;*/
+		
+		
 		/*var angle = 0.0;
 		var dAngle = 10;
 		
@@ -770,12 +888,19 @@ class Main {
 			morpher.update ( nowTime - prevTime );
 			prevTime = nowTime;
 			
+			if ( morpher.stopped ) {
+				if ( forceOneClip )
+					forceOneClip = false;
+				else
+					return;
+			}
+			
 			clipper = new VattiClipper ();
 			
 			for ( inputPoly in inputPolys )
 				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 			
-			clipper.clip ( clipOp );
+			clipper.clip ( clipOp, subjectFill, clipFill );
 			
 			//debugSprite.graphics.clear ();
 			//drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
@@ -832,9 +957,44 @@ class Main {
 				
 				trace ( clipOp );
 			} else if ( kb.keyCode == 75 )	// k
-				switchPolyKinds ();
-			else if ( kb.keyCode == 72 )	// h
+				swapPolyKinds ();
+			else if ( kb.keyCode == 72 ) {	// h
 				hideInputPolys = !hideInputPolys;
+				forceOneClip = true;
+			} else if ( kb.keyCode == 37 ) {	// left arrow
+				if ( morpher.rotationVelocity > 0 )
+					morpher.rotationVelocity = -morpher.rotationVelocity;
+				
+				if ( morpher.stopped ) {
+					morpher.stopped = false;
+					morpher.update ( 0.1 );
+					morpher.stopped = true;
+					forceOneClip = true;
+				}
+			} else if ( kb.keyCode == 39 ) {	// right arrow
+				if ( morpher.rotationVelocity < 0 )
+					morpher.rotationVelocity = -morpher.rotationVelocity;
+				
+				if ( morpher.stopped ) {
+					morpher.stopped = false;
+					morpher.update ( 0.1 );
+					morpher.stopped = true;
+					forceOneClip = true;
+				}
+			} else if ( kb.keyCode == 13 )		// enter
+				forceOneClip = true;
+			else if ( kb.keyCode == 82 ) {
+				randomOuputStrokes = !randomOuputStrokes;
+				forceOneClip = true;
+			} else if ( kb.keyCode == 219 ) {
+				subjectFill = subjectFill == PolyFill.EvenOdd ? PolyFill.NonZero : PolyFill.EvenOdd;
+				forceOneClip = true;
+				trace ( "subjectFill: " + subjectFill );
+			} else if ( kb.keyCode == 221 ) {
+				clipFill = clipFill == PolyFill.EvenOdd ? PolyFill.NonZero : PolyFill.EvenOdd;
+				forceOneClip = true;
+				trace ( "clipFill: " + clipFill );
+			}
 		} );
 	}
 	
@@ -849,12 +1009,21 @@ class Main {
 		default:
 			clipOp = ClipOperation.Intersection;
 		}
+		
+		forceOneClip = true;
 	}
 	
-	private static function switchPolyKinds ():Void {
+	private static function swapPolyKinds ():Void {
 		for ( poly in inputPolys ) {
 			poly.kind = poly.kind == PolyKind.Clip ? PolyKind.Subject : PolyKind.Clip;
 		}
+		
+		var tmpFill = subjectFill;
+		subjectFill = clipFill;
+		clipFill = tmpFill;
+		
+		trace ( "Swapped poly kinds and fills. subjectFill: " + subjectFill + ", clipFill: " + clipFill );
+		forceOneClip = true;
 	}
 	
 	private static function addInputPolygon ( pts:Array <Point>, kind:PolyKind ):Void {
@@ -875,7 +1044,15 @@ class Main {
 		clipper.drawCurrentScanbeam ( debugSprite.graphics, zoom );
 		clipper.drawIntersectionScanline ( debugSprite.graphics, zoom );
 		
-		clipper.drawContributedPolys ( debugSprite.graphics, 0, 0.5, 2 / zoom, 0xaa7700, 0.5 );
+		var strokeColor:Null <UInt> = 0;
+		var strokeOpacity:Float = 0.5;
+		
+		if ( randomOuputStrokes ) {
+			strokeColor = null;
+			strokeOpacity = 0.9;
+		}
+		
+		clipper.drawContributedPolys ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, 0xaa7700, 0.5 );
 		clipper.drawAelBySide ( debugSprite.graphics, zoom );
 		clipper.drawIntersections ( debugSprite.graphics, zoom );
 	}
@@ -894,14 +1071,14 @@ class Main {
 		VattiClipper.beginDrawPoly ( graphics, 0x777777, 0.7, 1 / zoom, 0xffdd77, 0.5 );
 		
 		for ( inputPoly in subjPolys )
-			VattiClipper.drawPoly ( inputPoly.pts, graphics );
+			VattiClipper.drawPoly ( inputPoly.pts, graphics, inputPoly.kind == PolyKind.Subject ? subjectFill : clipFill );
 		
 		VattiClipper.endDrawPoly ( graphics );
 		
 		VattiClipper.beginDrawPoly ( graphics, 0x777777, 0.7, 1 / zoom, 0x77ddff, 0.5 );
 		
 		for ( inputPoly in clipPolys )
-			VattiClipper.drawPoly ( inputPoly.pts, graphics );
+			VattiClipper.drawPoly ( inputPoly.pts, graphics, inputPoly.kind == PolyKind.Subject ? subjectFill : clipFill );
 		
 		VattiClipper.endDrawPoly ( graphics );
 	}

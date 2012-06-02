@@ -1,6 +1,9 @@
 package geom.clipper;
 import flash.display.Graphics;
+import flash.display.GraphicsPathCommand;
+import flash.display.GraphicsPathWinding;
 import flash.geom.Point;
+import flash.Vector;
 import geom.ChainedPolygon;
 import geom.ClosedPolygonIterator;
 import geom.ConcatIterator;
@@ -667,59 +670,80 @@ class VattiClipper {
 	 * @param	kind	Whether edges belong to subject or clip polygon?
 	 */
 	private function addEdgesToAel ( edge1:Edge, edge2:Edge, yb:Float, kind:PolyKind ):Void {
-		var fill = getFillRule ( kind );
+		var thisFill = getFillRule ( kind );
+		var otherKind = kind == PolyKind.Subject ? PolyKind.Clip : PolyKind.Subject;
+		var otherFill = getFillRule ( otherKind );
 		
-		// Calculate parity
+		// Calculate insideness
+		var insideThis:Bool, insideOther:Bool;
 		var numLikeEdges:Int = 0;
 		var numUnlikeEdges:Int = 0;
-		var windingSum:Int = 0;
+		var thisWindingSum:Int = 0;
+		var otherWindingSum:Int = 0;
 		var aelNode = ael;
 		var prevAelNode:ActiveEdge = null;
 		
+		// TODO: we calculate numLikeEdges and numUnlikeEdges even when
+		// thisFill and otherFill is not PolyFill.EvenOdd
+		// which is unnecessary waste of computing power.
 		while ( aelNode != null && aelNode.bottomXIntercept < edge1.bottomX ) {
 			if ( aelNode.kind == kind ) {
 				numLikeEdges++;
 				
-				if ( fill == PolyFill.NonZero )
-					windingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
-			} else
+				if ( thisFill == PolyFill.NonZero )
+					thisWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+			} else {
 				numUnlikeEdges++;
+				
+				if ( otherFill == PolyFill.NonZero )
+					otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+			}
 			
 			prevAelNode = aelNode;
 			aelNode = aelNode.next;
 		}
 		
+		if ( thisFill == PolyFill.EvenOdd )
+			insideThis = numLikeEdges % 2 == 1;
+		else /*if ( thisFill == PolyFill.NonZero )*/
+			insideThis = thisWindingSum != 0;
+			
+		if ( otherFill == PolyFill.EvenOdd )
+			insideOther = numUnlikeEdges % 2 == 1;
+		else /*if ( otherFill == PolyFill.NonZero )*/
+			insideOther = otherWindingSum != 0;
+		
 		var likeEdgesEven:Bool;
 		var contribVertex:Bool;
 		
 		if ( clipOp == ClipOperation.Intersection ) {
-			likeEdgesEven = numLikeEdges % 2 == 0;
-			contribVertex = numUnlikeEdges % 2 == 1;
+			likeEdgesEven = !insideThis;
+			contribVertex = insideOther;
 		} else if ( clipOp == ClipOperation.Difference ) {
-			if ( numUnlikeEdges % 2 == 0 )
+			if ( !insideOther )
 				contribVertex = kind == PolyKind.Subject;
 			else
 				contribVertex = kind == PolyKind.Clip;
 			
 			if ( kind == PolyKind.Subject )
-				likeEdgesEven = numLikeEdges % 2 == 0;
+				likeEdgesEven = !insideThis;
 			else
-				likeEdgesEven = numLikeEdges % 2 == 1;	// Invert sides
+				likeEdgesEven = insideThis;	// Invert sides
 		} else if ( clipOp == ClipOperation.Union ) {
-			likeEdgesEven = numLikeEdges % 2 == 0;
-			contribVertex = numUnlikeEdges % 2 == 0;
+			likeEdgesEven = !insideThis;
+			contribVertex = !insideOther;
 		} else /*if ( clipOp == ClipOperation.Xor )*/ {
-			likeEdgesEven = ( numLikeEdges % 2 == 0 ) == ( numUnlikeEdges % 2 == 0 );
+			likeEdgesEven = ( !insideThis ) == ( !insideOther );
 			contribVertex = true;
 		}
 		
 		var aelNode1:ActiveEdge, aelNode2:ActiveEdge;
 		var aelWinNode1:ActiveWindingEdge, aelWinNode2:ActiveWindingEdge;
 		
-		if ( fill == PolyFill.EvenOdd ) {
+		if ( thisFill == PolyFill.EvenOdd ) {
 			aelNode1 = new ActiveEdge ( edge1, kind );
 			aelNode2 = new ActiveEdge ( edge2, kind );
-		} else /*if ( fill == PolyFill.NonZero )*/ {
+		} else /*if ( thisFill == PolyFill.NonZero )*/ {
 			aelWinNode1 = new ActiveWindingEdge ( edge1, kind );
 			aelWinNode2 = new ActiveWindingEdge ( edge2, kind );
 			aelWinNode1.winding = 1;
@@ -734,8 +758,6 @@ class VattiClipper {
 		aelNode2.topXIntercept = edge1.bottomX;
 		aelNode1.bottomY = yb;
 		aelNode2.bottomY = yb;
-		aelNode1.contributing = contribVertex;
-		aelNode2.contributing = contribVertex;
 		
 		var cmp:Bool;	// Whether edge1 directed to the left relative to edge2?
 		
@@ -784,16 +806,16 @@ class VattiClipper {
 		if ( ael == null || ael.prev != null )
 			ael = aelNode1;
 		
-		if ( fill == PolyFill.NonZero ) {
+		if ( thisFill == PolyFill.NonZero ) {
 			// At this point order of aelNode1 and aelNode2 could be changed
 			aelWinNode1 = cast ( aelNode1, ActiveWindingEdge );
 			aelWinNode2 = cast ( aelNode2, ActiveWindingEdge );
 			
-			aelWinNode1.windingSum = windingSum + aelWinNode1.winding;
+			aelWinNode1.windingSum = thisWindingSum + aelWinNode1.winding;
 			aelWinNode2.windingSum = aelWinNode1.windingSum + aelWinNode2.winding;
 			
 			if ( aelWinNode1.windingSum == 0 || aelWinNode2.windingSum == 0 ) {
-				// If one windingSum is zero then other is either +1 or -1
+				// If one thisWindingSum is zero then other is either +1 or -1
 				aelWinNode1.isGhost = false;
 				aelWinNode2.isGhost = false;
 			} else {
@@ -802,6 +824,9 @@ class VattiClipper {
 				contribVertex = false;
 			}
 		}
+		
+		aelNode1.contributing = contribVertex;
+		aelNode2.contributing = contribVertex;
 		
 		if ( contribVertex )
 			addLocalMax ( aelNode1, aelNode2, new Point ( edge1.bottomX, yb ) );
@@ -1242,14 +1267,13 @@ class VattiClipper {
 					continue;
 				}
 				
-				var p = new Point ( lMin.bottomX, lMin.topY );
-				
 				// Intersect right edge with all edges between bounds
 				while ( selRight.prev != selLeft ) {
 					/* Create Intersection object with intersection point already set.
 					 * Since the point has already been calculated, it doesn't matter whether intersection was
 					 * horizontal or not. */
-					var isec = new Intersection ( selRight.prev.value, selRight.value, p, Math.POSITIVE_INFINITY );
+					var isec = new Intersection ( selRight.prev.value, selRight.value,
+						new Point ( lMin.bottomX, lMin.topY ), Math.POSITIVE_INFINITY );
 					DoublyList.swapAdjacent ( selRight.prev, selRight );
 					
 					// Add isec to the END of the il
@@ -1328,12 +1352,12 @@ class VattiClipper {
 			// e1Node precedes e2Node in AEL
 			var e1Node:ActiveEdge = isec.e1Node;
 			var e2Node:ActiveEdge = isec.e2Node;
-			var tmpSide:Side;
+			var areNotInteract:Bool = false;	// If one or both edges were ghost(s) then they are not interact
 			
 			if ( e1Node.kind == e2Node.kind ) {
-				var fill = getFillRule ( e1Node.kind );
+				var thisFill = getFillRule ( e1Node.kind );
 				
-				if ( fill == PolyFill.EvenOdd ) {
+				if ( thisFill == PolyFill.EvenOdd ) {
 					/* Like edge intersection:
 					 * (LC × RC) or (RC × LC) → LI and RI
 					 * (LS × RS) or (RS × LS) → LI and RI */
@@ -1348,30 +1372,185 @@ class VattiClipper {
 							addRight ( e1Node, isec.p );
 						}
 					}
-				} else /*if ( fill == PolyFill.NonZero )*/ {
+					
+					swapSides ( e1Node, e2Node );
+				} else /*if ( thisFill == PolyFill.NonZero )*/ {
+					/* Classify self-intersection.
+					 * Code below uses notation [Case #] to denote
+					 * correponding illustration from "doc/nonzero_isecs.svg" file.*/
 					var e1WinNode = e1Node.asWindingEdge;
 					var e2WinNode = e2Node.asWindingEdge;
 					var ws1:Int = AbsInt ( e1WinNode.windingSum );
 					var ws2:Int = AbsInt ( e2WinNode.windingSum );
-					// WARNING: taking abs value is wrong approach... investigate further.
 					
-					// Classify self-intersection
-					if ( ws1 == 0 ) {			// 0 × 1 → MN
+					if ( ws1 == 1 ) {
+						if ( ws2 == 2 && e1WinNode.winding == e2WinNode.winding ) {	// 1 × 2 → LI, [Case 1 and 2]
+							if ( e1Node.contributing ) {
+								isec.calculateIntersectionPoint ( yb, dy );
+								
+								if ( e1Node.side == Side.Left )
+									addLeft ( e1Node, isec.p );
+								else
+									addRight ( e1Node, isec.p );
+							}
+							
+							e2Node.side = e1Node.side;	// Inherit side
+							e1WinNode.isGhost = true;
+							e2WinNode.isGhost = false;
+						} else /*if ( ws2 == 0 )*/ {
+							if ( e1WinNode.winding == e2WinNode.winding ) {	// 1 × 0 (same winding) → RI, [Case 9 and 10]
+								if ( e2Node.contributing ) {
+									isec.calculateIntersectionPoint ( yb, dy );
+									
+									if ( e2Node.side == Side.Right )
+										addRight ( e2Node, isec.p );
+									else
+										addLeft ( e2Node, isec.p );
+								}
+								
+								e1Node.side = e2Node.side;	// Inherit side
+								e2WinNode.isGhost = true;
+								e1WinNode.isGhost = false;
+							} else {	// 1 × 0 (diff winding) → LI and RI, [Case 3 and 4]
+								if ( e1Node.contributing ) {	// Then e2Node is also contributing
+									isec.calculateIntersectionPoint ( yb, dy );
+									
+									if ( e1Node.side == Side.Left ) {	// Then e2Node's side is right
+										addLeft ( e1Node, isec.p );
+										addRight ( e2Node, isec.p );
+									} else {
+										addRight ( e1Node, isec.p );
+										addLeft ( e2Node, isec.p );
+									}
+								}
+								
+								swapSides ( e1Node, e2Node );
+							}
+						}
+					} else if ( ws1 == 0 /*&& ws2 == 1*/ ) {
+						if ( e1WinNode.winding == e2WinNode.winding ) {	// 0 × 1 (same winding) → RI and LI, [Case 5 and 6]
+							if ( e1Node.contributing ) {	// Then e2Node is also contributing
+								isec.calculateIntersectionPoint ( yb, dy );
+								
+								if ( e1Node.side == Side.Right ) {	// Then e2Node's side is left
+									addRight ( e1Node, isec.p );
+									addLeft ( e2Node, isec.p );
+								} else {
+									addLeft ( e1Node, isec.p );
+									addRight ( e2Node, isec.p );
+								}
+							}
+							
+							swapSides ( e1Node, e2Node );
+						} else {	// 0 × 1 (diff winding) → MN, [Case 7 and 8]
+							if ( e1Node.contributing ) {	// Then e2Node is also contributing
+								isec.calculateIntersectionPoint ( yb, dy );
+								
+								addLocalMin ( e1Node, e2Node, isec.p );
+								e1Node.contributing = false;
+								e2Node.contributing = false;
+								e1Node.poly = null;
+								e2Node.poly = null;
+							}
+							
+							e1WinNode.isGhost = true;
+							e2WinNode.isGhost = true;
+						}
+					} else if ( ws1 == 2 && ws2 == 1 && e1WinNode.winding != e2WinNode.winding ) {	// 2 × 1 → MX, [Case 11 and 12]
+						var thisKind = e1Node.kind;
+						var otherKind = thisKind == PolyKind.Subject ? PolyKind.Clip : PolyKind.Subject;
+						var otherFill = getFillRule ( otherKind );
 						
-					} else if ( ws1 == 1 ) {	// (1 × 0) or (1 × 2) → (L/R)I
+						// Calculate insideness
+						var insideThis:Bool, insideOther:Bool;
+						var numLikeEdges:Int = 0;
+						var numUnlikeEdges:Int = 0;
+						var thisWindingSum:Null <Int> = null;
+						var otherWindingSum:Null <Int> = null;
+						var aelNode = e1Node.prev;
 						
-					} else if ( ws1 == 2 ) {	// 2 × 1 → MX
+						// TODO: we calculate numLikeEdges and numUnlikeEdges even when
+						// thisFill and otherFill is not PolyFill.EvenOdd
+						// which is unnecessary waste of computing power.
+						while ( aelNode != null ) {
+							if ( aelNode.kind == thisKind ) {
+								numLikeEdges++;
+								
+								if ( thisWindingSum == null && thisFill == PolyFill.NonZero )
+									thisWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+							} else {
+								numUnlikeEdges++;
+								
+								if ( otherWindingSum == null && otherFill == PolyFill.NonZero )
+									otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+							}
+							
+							aelNode = aelNode.prev;
+						}
 						
+						if ( thisWindingSum == null )
+							thisWindingSum = 0;
+						
+						if ( otherWindingSum == null )
+							otherWindingSum = 0;
+						
+						if ( thisFill == PolyFill.EvenOdd )
+							insideThis = numLikeEdges % 2 == 1;
+						else /*if ( thisFill == PolyFill.NonZero )*/
+							insideThis = thisWindingSum != 0;
+							
+						if ( otherFill == PolyFill.EvenOdd )
+							insideOther = numUnlikeEdges % 2 == 1;
+						else /*if ( otherFill == PolyFill.NonZero )*/
+							insideOther = otherWindingSum != 0;
+						
+						var likeEdgesEven:Bool;
+						var contribVertex:Bool;
+						
+						if ( clipOp == ClipOperation.Intersection ) {
+							likeEdgesEven = !insideThis;
+							contribVertex = insideOther;
+						} else if ( clipOp == ClipOperation.Difference ) {
+							if ( !insideOther )
+								contribVertex = thisKind == PolyKind.Subject;
+							else
+								contribVertex = thisKind == PolyKind.Clip;
+							
+							if ( thisKind == PolyKind.Subject )
+								likeEdgesEven = !insideThis;
+							else
+								likeEdgesEven = insideThis;	// Invert sides
+						} else if ( clipOp == ClipOperation.Union ) {
+							likeEdgesEven = !insideThis;
+							contribVertex = !insideOther;
+						} else /*if ( clipOp == ClipOperation.Xor )*/ {
+							likeEdgesEven = ( !insideThis ) == ( !insideOther );
+							contribVertex = true;
+						}
+						
+						if ( likeEdgesEven ) {
+							// e2Node will be to the left of e1Node after swapping
+							e2Node.side = Side.Left;
+							e1Node.side = Side.Right;
+						} else {
+							e1Node.side = Side.Left;
+							e2Node.side = Side.Right;
+						}
+						
+						if ( contribVertex ) {
+							isec.calculateIntersectionPoint ( yb, dy );
+							addLocalMax ( e1Node, e2Node, isec.p );
+							e1Node.contributing = true;
+							e2Node.contributing = true;
+						}
+						
+						e1WinNode.isGhost = false;
+						e2WinNode.isGhost = false;
 					}
 					
 					e1WinNode.windingSum = e2WinNode.windingSum;
 					e2WinNode.windingSum -= e1WinNode.winding;
 				}
-				
-				// Exchange side values of edges
-				tmpSide = e1Node.side;
-				e1Node.side = e2Node.side;
-				e2Node.side = tmpSide;
 			} else {
 				// Check whether any of the edges is a ghost
 				var thereIsGhost:Bool = thereIsWindingFill &&
@@ -1417,12 +1596,10 @@ class VattiClipper {
 						else
 							addRight ( e2Node, isec.p );
 						
-						// Exchange side values of edges
-						tmpSide = e1Node.side;
-						e1Node.side = e2Node.side;
-						e2Node.side = tmpSide;
+						swapSides ( e1Node, e2Node );
 					}
-				}
+				} else
+					areNotInteract = true;
 			}
 			
 			// Swap e1Node and e2Node position in AEL
@@ -1433,20 +1610,28 @@ class VattiClipper {
 			else if ( isec.e2Node.prev == null )
 				ael = isec.e2Node;
 			
-			// Exchange adjPolyPtr pointers in edges
-			var tmpPoly = e1Node.poly;
-			e1Node.poly = e2Node.poly;
-			e2Node.poly = tmpPoly;
-			
-			var tmpContrib = e1Node.contributing;
-			e1Node.contributing = e2Node.contributing;
-			e2Node.contributing = tmpContrib;
+			if ( !areNotInteract ) {
+				// Exchange adjPolyPtr pointers in edges
+				var tmpPoly = e1Node.poly;
+				e1Node.poly = e2Node.poly;
+				e2Node.poly = tmpPoly;
+				
+				var tmpContrib = e1Node.contributing;
+				e1Node.contributing = e2Node.contributing;
+				e2Node.contributing = tmpContrib;
+			}
 			
 			if ( prevIsec == null )
 				il = il.next;
 			else
 				prevIsec.next = isec.next;
 		}
+	}
+	
+	private static inline function swapSides ( e1Node:ActiveEdge, e2Node:ActiveEdge ):Void {
+		var tmpSide = e1Node.side;
+		e1Node.side = e2Node.side;
+		e2Node.side = tmpSide;
 	}
 	
 	private static inline function AbsInt ( value:Int ):Int {
@@ -1530,21 +1715,37 @@ class VattiClipper {
 		graphics.endFill ();
 	}
 	
-	public static function drawPoly ( pts:Iterable <Point>, graphics:Graphics ):Void {
+	public static function drawPoly ( pts:Iterable <Point>, graphics:Graphics, fill:PolyFill = null ):Void {
 		var it = pts.iterator ();
 		
 		if ( !it.hasNext () )
 			return;
 		
+		if ( fill == null )
+			fill = PolyFill.EvenOdd;
+		
+		var cmds:Vector <Int> = new Vector <Int> ();
+		var coords:Vector <Float> = new Vector <Float> ();
 		var p = it.next ();
-		graphics.moveTo ( p.x, p.y );
+		var pFirst = p;
+		cmds.push ( GraphicsPathCommand.MOVE_TO );
+		coords.push ( p.x );
+		coords.push ( p.y );
 		
 		while ( it.hasNext () ) {
 			p = it.next ();
-			graphics.lineTo ( p.x, p.y );
+			cmds.push ( GraphicsPathCommand.LINE_TO );
+			coords.push ( p.x );
+			coords.push ( p.y );
 			
 			//graphics.drawCircle ( p.x, p.y, 2 );
 		}
+		
+		cmds.push ( GraphicsPathCommand.LINE_TO );
+		coords.push ( pFirst.x );
+		coords.push ( pFirst.y );
+		
+		graphics.drawPath ( cmds, coords, fill == PolyFill.EvenOdd ? GraphicsPathWinding.EVEN_ODD : GraphicsPathWinding.NON_ZERO );
 	}
 	
 	public static function beginDrawPolySvg ( buf:StringBuf,
@@ -1685,7 +1886,8 @@ class VattiClipper {
 				polys.add ( poly );
 		}
 		
-		beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth,
+		// Draw fills
+		beginDrawPoly ( graphics, null, 0.0, 0.0,
 			fill, fillOpacity );
 		
 		for ( poly in polys ) {
@@ -1693,6 +1895,13 @@ class VattiClipper {
 		}
 		
 		endDrawPoly ( graphics );
+		
+		// Draw strokes
+		for ( poly in polys ) {
+			beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth, 0, 0.0 );
+			drawPoly ( poly, graphics );
+			endDrawPoly ( graphics );
+		}
 	}
 	
 	public function drawCurrentScanbeam ( graphics:Graphics, zoom:Float = 1.0 ):Void {
