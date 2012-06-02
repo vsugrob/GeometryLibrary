@@ -97,13 +97,13 @@ class Main {
 	static function main () {
 		forceOneClip = true;
 		
-		clipOp = ClipOperation.Intersection;
+		//clipOp = ClipOperation.Intersection;
 		//clipOp = ClipOperation.Difference;
-		//clipOp = ClipOperation.Union;
+		clipOp = ClipOperation.Union;
 		//clipOp = ClipOperation.Xor;
 		
-		subjectFill = PolyFill.NonZero;
-		clipFill = PolyFill.NonZero;
+		subjectFill = PolyFill.EvenOdd;
+		clipFill = PolyFill.EvenOdd;
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
