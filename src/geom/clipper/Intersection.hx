@@ -141,44 +141,48 @@ class Intersection {
 	}
 	
 	public inline function classify ( clipOp:ClipOperation ):IntersectionType {
+		var isecType:IntersectionType;
+		
 		if ( clipOp == ClipOperation.Intersection ) {
 			if ( e1Node.side == Side.Left ) {
 				if ( e2Node.side == Side.Left )					// (LC ∩ LS) or (LS ∩ LC) → LI
-					return	IntersectionType.LeftIntermediate;
+					isecType = IntersectionType.LeftIntermediate;
 				else /*if ( e2Node.side == Side.Right )*/		// (LS ∩ RC) or (LC ∩ RS) → MN
-					return	IntersectionType.LocalMinima;
+					isecType = IntersectionType.LocalMinima;
 			} else /*if ( e1Node.side == Side.Right )*/ {
 				if ( e2Node.side == Side.Right )				// (RC ∩ RS) or (RS ∩ RC) → RI
-					return	IntersectionType.RightIntermediate;
+					isecType = IntersectionType.RightIntermediate;
 				else /*if ( e2Node.side == Side.Left )*/		// (RS ∩ LC) or (RC ∩ LS) → MX
-					return	IntersectionType.LocalMaxima;
+					isecType = IntersectionType.LocalMaxima;
 			}
 		} else if ( clipOp == ClipOperation.Difference ) {
 			if ( e1Node.side == Side.Left ) {
 				if ( e2Node.side == Side.Left )					// (LS - LC) or (LC - LS) → LI
-					return	IntersectionType.LeftIntermediate;
+					isecType = IntersectionType.LeftIntermediate;
 				else /*if ( e2Node.side == Side.Right )*/		// (LS - RC) or (LC - RS) → MN
-					return	IntersectionType.LocalMinima;
+					isecType = IntersectionType.LocalMinima;
 			} else /*if ( e1Node.side == Side.Right )*/ {
 				if ( e2Node.side == Side.Left )					// (RC - LS) or (RS - LC) → MX
-					return	IntersectionType.LocalMaxima;
+					isecType = IntersectionType.LocalMaxima;
 				else /*if ( e2Node.side == Side.Right )*/		// (RC - RS) or (RS - RC) → RI
-					return	IntersectionType.RightIntermediate;
+					isecType = IntersectionType.RightIntermediate;
 			}
 		} else if ( clipOp == ClipOperation.Union ) {
 			if ( e1Node.side == Side.Left ) {
 				if ( e2Node.side == Side.Left )					// (LC + LS) or (LS + LC) → LI
-					return	IntersectionType.LeftIntermediate;
+					isecType = IntersectionType.LeftIntermediate;
 				else /*if ( e2Node.side == Side.Right )*/		// (LC + RS) or (LS + RC) → MX
-					return	IntersectionType.LocalMaxima;
+					isecType = IntersectionType.LocalMaxima;
 			} else /*if ( e1Node.side == Side.Right )*/ {
 				if ( e2Node.side == Side.Right )				// (RC + RS) or (RS + RC) → RI
-					return	IntersectionType.RightIntermediate;
+					isecType = IntersectionType.RightIntermediate;
 				else /*if ( e2Node.side == Side.Left )*/		// (RC + LS) or (RS + LC) → MN
-					return	IntersectionType.LocalMinima;
+					isecType = IntersectionType.LocalMinima;
 			}
 		} else /*if ( clipOp == ClipOperation.Xor )*/ {
 			throw "Argument clipOp value of ClipOperation.Xor is not acceptable by classify ( clipOp:ClipOperation ):IntersectionType function.";
 		}
+		
+		return	isecType;
 	}
 }

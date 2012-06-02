@@ -48,7 +48,12 @@ class VattiClipper {
 	/**
 	 * List of polygons being formed during clipping operation.
 	 */
-	private var outPolys:List <ChainedPolygon>;
+	private var outPolys:List <ClipResultPolygon>;
+	/**
+	 * Number of currently contributing polygons. Necessary for output polygon
+	 * index determination.
+	 */
+	private var numContribugingPolys:UInt;
 	/**
 	 * List of intersections calculated in buildIntersectionList ().
 	 */
@@ -75,7 +80,7 @@ class VattiClipper {
 	private var thereIsWindingFill:Bool;
 	
 	public inline function new () {
-		this.outPolys = new List <ChainedPolygon> ();
+		this.outPolys = new List <ClipResultPolygon> ();
 	}
 	
 	/**
@@ -109,7 +114,8 @@ class VattiClipper {
 		sbl = null;
 		ael = null;
 		hel = null;
-		outPolys = new List <ChainedPolygon> ();
+		outPolys = new List <ClipResultPolygon> ();
+		numContribugingPolys = 0;
 		il = null;
 		ilLast = null;
 	}
@@ -139,7 +145,7 @@ class VattiClipper {
 			sbTop = popScanbeam ();	// Top of the current scanbeam
 			sbHeight = sbTop - sbBottom;
 			
-			processIntersections ();
+			processIntersectionsInAel ();
 			processEdgesInAel ();
 			
 			sbBottom = sbTop;
@@ -523,6 +529,7 @@ class VattiClipper {
 		var numUnlikeEdges:Int = 0;
 		var thisWindingSum:Int = 0;
 		var otherWindingSum:Int = 0;
+		var closestContribNode:ActiveEdge = null;
 		var aelNode = ael;
 		var prevAelNode:ActiveEdge = null;
 		
@@ -533,6 +540,9 @@ class VattiClipper {
 						numLikeEdges++;
 					else
 						numUnlikeEdges++;
+					
+					if ( aelNode.poly != null )
+						closestContribNode = aelNode;
 					
 					prevAelNode = aelNode;
 					aelNode = aelNode.next;
@@ -545,6 +555,9 @@ class VattiClipper {
 						numLikeEdges++;
 					else
 						otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+					
+					if ( aelNode.poly != null )
+						closestContribNode = aelNode;
 					
 					prevAelNode = aelNode;
 					aelNode = aelNode.next;
@@ -562,6 +575,9 @@ class VattiClipper {
 					else
 						numUnlikeEdges++;
 					
+					if ( aelNode.poly != null )
+						closestContribNode = aelNode;
+					
 					prevAelNode = aelNode;
 					aelNode = aelNode.next;
 				}
@@ -573,6 +589,9 @@ class VattiClipper {
 						thisWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
 					else
 						otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+					
+					if ( aelNode.poly != null )
+						closestContribNode = aelNode;
 					
 					prevAelNode = aelNode;
 					aelNode = aelNode.next;
@@ -700,7 +719,7 @@ class VattiClipper {
 		aelNode2.contributing = contribVertex;
 		
 		if ( contribVertex )
-			processLocalMax ( aelNode1, aelNode2, new Point ( edge1.bottomX, sbBottom ) );
+			processLocalMax ( aelNode1, aelNode2, closestContribNode, new Point ( edge1.bottomX, sbBottom ) );
 	}
 	
 	private inline function addHorizontalEdge ( eNode:ActiveEdge ):Void {
@@ -710,9 +729,22 @@ class VattiClipper {
 			hel.insertNext ( eNode );
 	}
 	
-	private inline function processLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point ):Void {
-		var pNode:DoublyList <Point> = new DoublyList <Point> ( p );
-		var poly:ChainedPolygon = new ChainedPolygon ( pNode, pNode );
+	private inline function processLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, closestContribNode:ActiveEdge, p:Point ):Void {
+		var parent:ClipResultPolygon;
+		var isHole:Bool;
+		
+		if ( closestContribNode == null ) {
+			parent = null;
+			isHole = false;
+		} else if ( closestContribNode.side == Side.Right ) {
+			parent = closestContribNode.poly.parent;
+			isHole = false;
+		} else {
+			parent = closestContribNode.poly;
+			isHole = true;
+		}
+		
+		var poly = new ClipResultPolygon ( p, parent, isHole, numContribugingPolys++ );
 		
 		e1Node.poly = poly;
 		e2Node.poly = poly;
@@ -766,9 +798,9 @@ class VattiClipper {
 						var p = new Point ( edge.successor.bottomX, sbTop );
 						
 						if ( aelNode.side == Side.Left )
-							addLeft ( aelNode, p );
+							addPointToLeftBound ( aelNode, p );
 						else
-							addRight ( aelNode, p );
+							addPointToRightBound ( aelNode, p );
 					}
 					
 					aelNode.edge = edge.successor;
@@ -876,9 +908,9 @@ class VattiClipper {
 					var p = new Point ( edge.successor.bottomX, edge.topY );
 					
 					if ( aelNode.side == Side.Left )
-						addLeft ( aelNode, p );
+						addPointToLeftBound ( aelNode, p );
 					else
-						addRight ( aelNode, p );
+						addPointToRightBound ( aelNode, p );
 				}
 				
 				aelNode.edge = edge.successor;
@@ -912,19 +944,19 @@ class VattiClipper {
 		}
 	}
 	
-	private inline function addLeft ( aelNode:ActiveEdge, p:Point ):Void {
-		aelNode.poly.prependPoint ( p );
+	private inline function addPointToLeftBound ( aelNode:ActiveEdge, p:Point ):Void {
+		aelNode.poly.addFirst ( p );
 	}
 	
-	private inline function addRight ( aelNode:ActiveEdge, p:Point ):Void {
-		aelNode.poly.appendPoint ( p );
+	private inline function addPointToRightBound ( aelNode:ActiveEdge, p:Point ):Void {
+		aelNode.poly.addLast ( p );
 	}
 	
 	private inline function processLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void {
 		if ( aelNode1.side == Side.Left )
-			addLeft ( aelNode1, p );
+			addPointToLeftBound ( aelNode1, p );
 		else
-			addRight ( aelNode1, p );
+			addPointToRightBound ( aelNode1, p );
 		
 		if ( aelNode1.poly != aelNode2.poly )	// aelNode1 and aelNode2 have different output polygons
 			appendPolygon ( aelNode1, aelNode2 );
@@ -933,59 +965,25 @@ class VattiClipper {
 	}
 	
 	private function appendPolygon ( e1:ActiveEdge, f1:ActiveEdge ):Void {
-		/* Let P1 = P[p0p1…pn] and P2 = P[q0q1…qs] be the polygons adjacent
-		 * to e1 and f1, respectively. Let e2 and f2 be the other top edges of P1 and P2,
-		 * respectively. */
-		if ( e1.side == Side.Left ) {
-			/* Quote from VattiClip.pdf:
-			 * "Add vertex list of P2 to the left of vertex list of P1, that is,
-			 * replace P1 by P[qsqs−1…q0p0p1…pn]
-			 * Make P1 the adjacent polygon of f2;"
-			 * I think there is a mistake. Hereby we assume that the left edge e1 ALWAYS
-			 * connects with the RIGHT edge f1.*/
-			
-			e1.poly.first.prev = f1.poly.last;
-			f1.poly.last.next = e1.poly.first;
-			e1.poly.first = f1.poly.first;
-			
-			var f2 = ael;
-			
-			do {
-				if ( f2.poly == f1.poly && f2 != f1 ) {
-					f2.poly = e1.poly;	// Make P1 the adjacent polygon of f2
-					
-					break;
-				}
+		if ( e1.side == Side.Left )
+			e1.poly.prepend ( f1.poly );
+		else /*if ( e1.side == Side.Right )*/
+			e1.poly.append ( f1.poly );
+		
+		var f2 = ael;
+		
+		do {
+			if ( f2.poly == f1.poly && f2 != f1 ) {
+				f2.poly = e1.poly;	// Make P1 the adjacent polygon of f2
 				
-				f2 = f2.next;
-			} while ( f2 != null );
-		} else {
-			/* Quote from VattiClip.pdf:
-			 * "Add vertex list of P1 to the right of vertex list of P2, that is,
-			 * replace P2 by P[q0q1…qspnpn−1…p0]
-			 * Make P2 the adjacent polygon of e2;"
-			 * I think there is a mistake. Hereby we assume that the right edge e1 ALWAYS
-			 * connects with the LEFT edge f1.*/
+				break;
+			}
 			
-			e1.poly.last.next = f1.poly.first;
-			f1.poly.first.prev = e1.poly.last;
-			f1.poly.first = e1.poly.first;
-			
-			var e2 = ael;
-			
-			do {
-				if ( e2.poly == e1.poly && e2 != e1 ) {
-					e2.poly = f1.poly;	// Make P2 the adjacent polygon of e2
-					
-					break;
-				}
-				
-				e2 = e2.next;
-			} while ( e2 != null );
-		}
+			f2 = f2.next;
+		} while ( f2 != null );
 	}
 	
-	private function processIntersections ():Void {
+	private function processIntersectionsInAel ():Void {
 		if ( ael == null )
 			return;
 		
@@ -1234,7 +1232,8 @@ class VattiClipper {
 		// e1Node precedes e2Node in AEL
 		var e1Node:ActiveEdge = isec.e1Node;
 		var e2Node:ActiveEdge = isec.e2Node;
-		var areNotInteract:Bool = false;	// If one or both edges were ghost(s) then they are not interact
+		var areNotInteract:Bool = false;	// If one or both edges are ghosts then they are not interact
+		var closestContribNode:ActiveEdge = null;
 		
 		if ( e1Node.kind == e2Node.kind ) {
 			var thisFill = getFillRule ( e1Node.kind );
@@ -1247,11 +1246,11 @@ class VattiClipper {
 					isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 					
 					if ( e1Node.side == Side.Left ) {
-						addLeft ( e1Node, isec.p );
-						addRight ( e2Node, isec.p );
+						addPointToLeftBound ( e1Node, isec.p );
+						addPointToRightBound ( e2Node, isec.p );
 					} else {
-						addLeft ( e2Node, isec.p );
-						addRight ( e1Node, isec.p );
+						addPointToLeftBound ( e2Node, isec.p );
+						addPointToRightBound ( e1Node, isec.p );
 					}
 				}
 				
@@ -1271,9 +1270,9 @@ class VattiClipper {
 							isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 							
 							if ( e1Node.side == Side.Left )
-								addLeft ( e1Node, isec.p );
+								addPointToLeftBound ( e1Node, isec.p );
 							else
-								addRight ( e1Node, isec.p );
+								addPointToRightBound ( e1Node, isec.p );
 						}
 						
 						e2Node.side = e1Node.side;	// Inherit side
@@ -1285,9 +1284,9 @@ class VattiClipper {
 								isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 								
 								if ( e2Node.side == Side.Right )
-									addRight ( e2Node, isec.p );
+									addPointToRightBound ( e2Node, isec.p );
 								else
-									addLeft ( e2Node, isec.p );
+									addPointToLeftBound ( e2Node, isec.p );
 							}
 							
 							e1Node.side = e2Node.side;	// Inherit side
@@ -1298,11 +1297,11 @@ class VattiClipper {
 								isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 								
 								if ( e1Node.side == Side.Left ) {	// Then e2Node's side is right
-									addLeft ( e1Node, isec.p );
-									addRight ( e2Node, isec.p );
+									addPointToLeftBound ( e1Node, isec.p );
+									addPointToRightBound ( e2Node, isec.p );
 								} else {
-									addRight ( e1Node, isec.p );
-									addLeft ( e2Node, isec.p );
+									addPointToRightBound ( e1Node, isec.p );
+									addPointToLeftBound ( e2Node, isec.p );
 								}
 							}
 							
@@ -1315,11 +1314,11 @@ class VattiClipper {
 							isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 							
 							if ( e1Node.side == Side.Right ) {	// Then e2Node's side is left
-								addRight ( e1Node, isec.p );
-								addLeft ( e2Node, isec.p );
+								addPointToRightBound ( e1Node, isec.p );
+								addPointToLeftBound ( e2Node, isec.p );
 							} else {
-								addLeft ( e1Node, isec.p );
-								addRight ( e2Node, isec.p );
+								addPointToLeftBound ( e1Node, isec.p );
+								addPointToRightBound ( e2Node, isec.p );
 							}
 						}
 						
@@ -1359,18 +1358,12 @@ class VattiClipper {
 								else
 									numUnlikeEdges++;
 								
-								aelNode = aelNode.prev;
-							}
-							
-							insideOther = numUnlikeEdges % 2 == 1;
-						} else /*if ( otherFill == PolyFill.NonZero )*/ {
-							while ( aelNode != null ) {
-								if ( aelNode.kind == thisKind )
-									numLikeEdges++;
-								else {
-									otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+								if ( aelNode.poly != null ) {
+									closestContribNode = aelNode;
 									aelNode = aelNode.prev;
 									
+									/* We've found closestContribNode and no longer need this "if" branch
+									 * so proceed to the next, more "lightweight" loop.*/
 									break;
 								}
 								
@@ -1380,8 +1373,62 @@ class VattiClipper {
 							while ( aelNode != null ) {
 								if ( aelNode.kind == thisKind )
 									numLikeEdges++;
+								else
+									numUnlikeEdges++;
 								
 								aelNode = aelNode.prev;
+							}
+							
+							insideOther = numUnlikeEdges % 2 == 1;
+						} else /*if ( otherFill == PolyFill.NonZero )*/ {
+							while ( aelNode != null ) {
+								if ( closestContribNode == null && aelNode.poly != null )
+									closestContribNode = aelNode;
+								
+								if ( aelNode.kind == thisKind )
+									numLikeEdges++;
+								else {
+									otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+									aelNode = aelNode.prev;
+									
+									/* We've found otherWindingSum and no longer need this "if" branch
+									 * so proceed to the next, more "lightweight" loop.*/
+									break;
+								}
+								
+								aelNode = aelNode.prev;
+							}
+							
+							if ( closestContribNode != null ) {
+								while ( aelNode != null ) {
+									if ( aelNode.kind == thisKind )
+										numLikeEdges++;
+									
+									aelNode = aelNode.prev;
+								}
+							} else {
+								while ( aelNode != null ) {
+									if ( aelNode.kind == thisKind )
+										numLikeEdges++;
+									
+									if ( aelNode.poly != null ) {
+										closestContribNode = aelNode;
+										aelNode = aelNode.prev;
+										
+										/* We've found closestContribNode and no longer need this "if" branch
+										 * so proceed to the next, more "lightweight" loop.*/
+										break;
+									}
+									
+									aelNode = aelNode.prev;
+								}
+								
+								while ( aelNode != null ) {
+									if ( aelNode.kind == thisKind )
+										numLikeEdges++;
+									
+									aelNode = aelNode.prev;
+								}
 							}
 							
 							insideOther = otherWindingSum != 0;
@@ -1394,19 +1441,40 @@ class VattiClipper {
 								if ( aelNode.kind == otherKind )
 									numUnlikeEdges++;
 								
+								if ( aelNode.poly != null )
+									closestContribNode = aelNode;
+								
 								aelNode = aelNode.prev;
 							}
 							
 							insideOther = numUnlikeEdges % 2 == 1;
 						} else /*if ( otherFill == PolyFill.NonZero )*/ {
 							while ( aelNode != null ) {
+								if ( closestContribNode == null && aelNode.poly != null )
+									closestContribNode = aelNode;
+								
 								if ( aelNode.kind == otherKind ) {
 									otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+									aelNode = aelNode.prev;
 									
+									/* We've found otherWindingSum and no longer need this "if" branch
+									 * so proceed to the next, more "lightweight" loop.*/
 									break;
 								}
 								
 								aelNode = aelNode.prev;
+							}
+							
+							if ( closestContribNode == null ) {
+								while ( aelNode != null ) {
+									if ( aelNode.poly != null ) {
+										closestContribNode = aelNode;
+										
+										break;
+									}
+									
+									aelNode = aelNode.prev;
+								}
 							}
 							
 							insideOther = otherWindingSum != 0;
@@ -1451,7 +1519,7 @@ class VattiClipper {
 					
 					if ( contribVertex ) {
 						isec.calculateIntersectionPoint ( sbBottom, sbHeight );
-						processLocalMax ( e1Node, e2Node, isec.p );
+						processLocalMax ( e1Node, e2Node, closestContribNode, isec.p );
 						e1Node.contributing = true;
 						e2Node.contributing = true;
 					}
@@ -1478,14 +1546,14 @@ class VattiClipper {
 					switch ( isecType ) {
 					case IntersectionType.LeftIntermediate:
 						if ( clipOp == ClipOperation.Union )
-							addLeft ( e1Node, isec.p );
+							addPointToLeftBound ( e1Node, isec.p );
 						else
-							addLeft ( e2Node, isec.p );
+							addPointToLeftBound ( e2Node, isec.p );
 					case IntersectionType.RightIntermediate:
 						if ( clipOp == ClipOperation.Union )
-							addRight ( e2Node, isec.p );
+							addPointToRightBound ( e2Node, isec.p );
 						else
-							addRight ( e1Node, isec.p );
+							addPointToRightBound ( e1Node, isec.p );
 					case IntersectionType.LocalMinima:
 						processLocalMin ( e1Node, e2Node, isec.p );
 						e1Node.contributing = false;
@@ -1493,20 +1561,21 @@ class VattiClipper {
 						e1Node.poly = null;
 						e2Node.poly = null;
 					case IntersectionType.LocalMaxima:
-						processLocalMax ( e1Node, e2Node, isec.p );
+						closestContribNode = seekClosestContributingPoly ( e1Node.prev );
+						processLocalMax ( e1Node, e2Node, closestContribNode, isec.p );
 						e1Node.contributing = true;
 						e2Node.contributing = true;
 					}
 				} else {
 					if ( e1Node.side == Side.Left )
-						addLeft ( e1Node, isec.p );
+						addPointToLeftBound ( e1Node, isec.p );
 					else
-						addRight ( e1Node, isec.p );
+						addPointToRightBound ( e1Node, isec.p );
 					
 					if ( e2Node.side == Side.Left )
-						addLeft ( e2Node, isec.p );
+						addPointToLeftBound ( e2Node, isec.p );
 					else
-						addRight ( e2Node, isec.p );
+						addPointToRightBound ( e2Node, isec.p );
 					
 					swapSides ( e1Node, e2Node );
 				}
@@ -1515,7 +1584,7 @@ class VattiClipper {
 		}
 		
 		if ( !areNotInteract ) {
-			// Exchange adjPolyPtr pointers in edges
+			// Exchange poly pointers in edges
 			var tmpPoly = e1Node.poly;
 			e1Node.poly = e2Node.poly;
 			e2Node.poly = tmpPoly;
@@ -1524,6 +1593,22 @@ class VattiClipper {
 			e1Node.contributing = e2Node.contributing;
 			e2Node.contributing = tmpContrib;
 		}
+	}
+	
+	private static inline function seekClosestContributingPoly ( aelNode:ActiveEdge ):ActiveEdge {
+		var closestContribNode:ActiveEdge = null;
+		
+		while ( aelNode != null ) {
+			if ( aelNode.poly != null ) {
+				closestContribNode = aelNode;
+				
+				break;
+			}
+			
+			aelNode = aelNode.prev;
+		}
+		
+		return	closestContribNode;
 	}
 	
 	private static inline function swapSides ( e1Node:ActiveEdge, e2Node:ActiveEdge ):Void {
@@ -1694,9 +1779,9 @@ class VattiClipper {
 	
 	public function drawContributedPolys ( graphics:Graphics,
 		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
-		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
+		fill:Null <UInt> = null, fillOpacity = 0.5, emphasizeHoles:Bool = false ):Void
 	{
-		var polys = new List <ChainedPolygon> ();
+		var polys = new List <ClipResultPolygon> ();
 		var aelNode = ael;
 		
 		while ( aelNode != null ) {
@@ -1725,7 +1810,14 @@ class VattiClipper {
 		
 		// Draw strokes
 		for ( poly in polys ) {
-			beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth, 0, 0.0 );
+			var effectiveStrokeColor:Null <UInt>;
+			
+			if ( emphasizeHoles && poly.isHole )
+				effectiveStrokeColor = 0xff0000;
+			else
+				effectiveStrokeColor = stroke;
+			
+			beginDrawPoly ( graphics, effectiveStrokeColor, strokeOpacity, strokeWidth, 0, 0.0 );
 			drawPoly ( poly, graphics );
 			endDrawPoly ( graphics );
 		}

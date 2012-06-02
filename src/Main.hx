@@ -31,6 +31,7 @@ class Main {
 	static var clipFill:PolyFill;
 	static var forceOneClip:Bool;
 	static var randomOuputStrokes:Bool;
+	static var emphasizeHoles:Bool;
 	
 	static function testRandomPolyClipping ( numTestsPerFrame:UInt = 20, numPoints:UInt = 100 ):Void {
 		var stage = Lib.current.stage;
@@ -105,8 +106,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*testRandomPolyClipping ( 100, 10 );
-		return;*/
+		testRandomPolyClipping ( 100, 10 );
+		return;
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -147,7 +148,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: two clip polygons
+		// Test: two clip polygons
 		var subject = [
 			new Point ( 0, 100 ),
 			new Point ( 100, 250 ),
@@ -170,7 +171,7 @@ class Main {
 		
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( clip2, PolyKind.Clip );*/
+		addInputPolygon ( clip2, PolyKind.Clip );
 		
 		
 		/*// Test: self-intersections with even-odd rule (vatti clip classic behavior)
@@ -739,7 +740,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: cross in circle nonzero test
+		/*// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -774,7 +775,7 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		
 		/*var angle = 0.0;
@@ -832,7 +833,7 @@ class Main {
 		}*/
 		
 		morpher = new DebugPolyMorpher ( inputPolys, 20 );
-		//morpher.stopped = true;
+		morpher.stopped = true;
 		var prevTime:Float = Date.now ().getTime () / 1000;
 		
 		stage.addEventListener ( Event.ENTER_FRAME, function ( e:Event ) {
@@ -916,14 +917,17 @@ class Main {
 			else if ( kb.keyCode == 82 ) {
 				randomOuputStrokes = !randomOuputStrokes;
 				forceOneClip = true;
-			} else if ( kb.keyCode == 219 ) {
+			} else if ( kb.keyCode == 219 ) {	// "[" key
 				subjectFill = subjectFill == PolyFill.EvenOdd ? PolyFill.NonZero : PolyFill.EvenOdd;
 				forceOneClip = true;
 				trace ( "subjectFill: " + subjectFill );
-			} else if ( kb.keyCode == 221 ) {
+			} else if ( kb.keyCode == 221 ) {	// "]" key
 				clipFill = clipFill == PolyFill.EvenOdd ? PolyFill.NonZero : PolyFill.EvenOdd;
 				forceOneClip = true;
 				trace ( "clipFill: " + clipFill );
+			} else if ( kb.keyCode == 69 ) {
+				emphasizeHoles = !emphasizeHoles;
+				forceOneClip = true;
 			}
 		} );
 	}
@@ -979,7 +983,7 @@ class Main {
 			strokeOpacity = 0.9;
 		}
 		
-		clipper.drawContributedPolys ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, 0xaa7700, 0.5 );
+		clipper.drawContributedPolys ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, 0xaa7700, 0.5, emphasizeHoles );
 	}
 	
 	private static function drawInputPolys ( graphics:Graphics, zoom:Float = 1.0 ):Void {

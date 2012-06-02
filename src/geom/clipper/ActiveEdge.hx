@@ -39,7 +39,7 @@ class ActiveEdge {
 	/**
 	 * Pointer to partial polygon associated to the edge.
 	 */
-	public var poly:ChainedPolygon;
+	public var poly:ClipResultPolygon;
 	/**
 	 * Precasted reference to this instance as ActiveWindingEdge. If this is
 	 * not an ActiveWindingEdge, this property will contain null.

@@ -25,7 +25,19 @@ class ChainedPolygon {
 		first = first.prev;
 	}
 	
-	public function iterator ():Iterator <Point> {
+	public inline function prepend ( poly:ChainedPolygon ):Void {
+		first.prev = poly.last;
+		poly.last.next = first;
+		first = poly.first;
+	}
+	
+	public inline function append ( poly:ChainedPolygon ):Void {
+		last.next = poly.first;
+		poly.first.prev = last;
+		last = poly.last;
+	}
+	
+	public inline function iterator ():Iterator <Point> {
 		return	first.iterator ();
 	}
 }
