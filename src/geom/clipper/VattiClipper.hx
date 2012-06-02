@@ -1350,139 +1350,52 @@ class VattiClipper {
 					var otherWindingSum:Int = 0;
 					var aelNode = e1Node.prev;
 					
-					if ( thisFill == PolyFill.EvenOdd ) {
-						if ( otherFill == PolyFill.EvenOdd ) {
-							while ( aelNode != null ) {
-								if ( aelNode.kind == thisKind )
-									numLikeEdges++;
-								else
-									numUnlikeEdges++;
+					if ( otherFill == PolyFill.EvenOdd ) {
+						while ( aelNode != null ) {
+							if ( aelNode.kind == otherKind )
+								numUnlikeEdges++;
+							
+							if ( aelNode.poly != null )
+								closestContribNode = aelNode;
+							
+							aelNode = aelNode.prev;
+						}
+						
+						insideOther = numUnlikeEdges % 2 == 1;
+					} else /*if ( otherFill == PolyFill.NonZero )*/ {
+						while ( aelNode != null ) {
+							if ( closestContribNode == null && aelNode.poly != null )
+								closestContribNode = aelNode;
+							
+							if ( aelNode.kind == otherKind ) {
+								otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+								aelNode = aelNode.prev;
 								
+								/* We've found otherWindingSum and no longer need this "if" branch
+								 * so proceed to the next, more "lightweight" loop.*/
+								break;
+							}
+							
+							aelNode = aelNode.prev;
+						}
+						
+						if ( closestContribNode == null ) {
+							while ( aelNode != null ) {
 								if ( aelNode.poly != null ) {
 									closestContribNode = aelNode;
-									aelNode = aelNode.prev;
 									
-									/* We've found closestContribNode and no longer need this "if" branch
-									 * so proceed to the next, more "lightweight" loop.*/
 									break;
 								}
 								
 								aelNode = aelNode.prev;
 							}
-							
-							while ( aelNode != null ) {
-								if ( aelNode.kind == thisKind )
-									numLikeEdges++;
-								else
-									numUnlikeEdges++;
-								
-								aelNode = aelNode.prev;
-							}
-							
-							insideOther = numUnlikeEdges % 2 == 1;
-						} else /*if ( otherFill == PolyFill.NonZero )*/ {
-							while ( aelNode != null ) {
-								if ( closestContribNode == null && aelNode.poly != null )
-									closestContribNode = aelNode;
-								
-								if ( aelNode.kind == thisKind )
-									numLikeEdges++;
-								else {
-									otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
-									aelNode = aelNode.prev;
-									
-									/* We've found otherWindingSum and no longer need this "if" branch
-									 * so proceed to the next, more "lightweight" loop.*/
-									break;
-								}
-								
-								aelNode = aelNode.prev;
-							}
-							
-							if ( closestContribNode != null ) {
-								while ( aelNode != null ) {
-									if ( aelNode.kind == thisKind )
-										numLikeEdges++;
-									
-									aelNode = aelNode.prev;
-								}
-							} else {
-								while ( aelNode != null ) {
-									if ( aelNode.kind == thisKind )
-										numLikeEdges++;
-									
-									if ( aelNode.poly != null ) {
-										closestContribNode = aelNode;
-										aelNode = aelNode.prev;
-										
-										/* We've found closestContribNode and no longer need this "if" branch
-										 * so proceed to the next, more "lightweight" loop.*/
-										break;
-									}
-									
-									aelNode = aelNode.prev;
-								}
-								
-								while ( aelNode != null ) {
-									if ( aelNode.kind == thisKind )
-										numLikeEdges++;
-									
-									aelNode = aelNode.prev;
-								}
-							}
-							
-							insideOther = otherWindingSum != 0;
 						}
 						
-						insideThis = numLikeEdges % 2 == 1;
-					} else /*if ( thisFill == PolyFill.NonZero )*/ {
-						if ( otherFill == PolyFill.EvenOdd ) {
-							while ( aelNode != null ) {
-								if ( aelNode.kind == otherKind )
-									numUnlikeEdges++;
-								
-								if ( aelNode.poly != null )
-									closestContribNode = aelNode;
-								
-								aelNode = aelNode.prev;
-							}
-							
-							insideOther = numUnlikeEdges % 2 == 1;
-						} else /*if ( otherFill == PolyFill.NonZero )*/ {
-							while ( aelNode != null ) {
-								if ( closestContribNode == null && aelNode.poly != null )
-									closestContribNode = aelNode;
-								
-								if ( aelNode.kind == otherKind ) {
-									otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
-									aelNode = aelNode.prev;
-									
-									/* We've found otherWindingSum and no longer need this "if" branch
-									 * so proceed to the next, more "lightweight" loop.*/
-									break;
-								}
-								
-								aelNode = aelNode.prev;
-							}
-							
-							if ( closestContribNode == null ) {
-								while ( aelNode != null ) {
-									if ( aelNode.poly != null ) {
-										closestContribNode = aelNode;
-										
-										break;
-									}
-									
-									aelNode = aelNode.prev;
-								}
-							}
-							
-							insideOther = otherWindingSum != 0;
-						}
-						
-						thisWindingSum = e1WinNode.windingSum - e1WinNode.winding;
-						insideThis = thisWindingSum != 0;
+						insideOther = otherWindingSum != 0;
 					}
+					
+					thisWindingSum = e1WinNode.windingSum - e1WinNode.winding;
+					insideThis = thisWindingSum != 0;
 					
 					var likeEdgesEven:Bool;
 					var contribVertex:Bool;

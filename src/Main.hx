@@ -87,7 +87,7 @@ class Main {
 		//clipOp = ClipOperation.Union;
 		//clipOp = ClipOperation.Xor;
 		
-		subjectFill = PolyFill.EvenOdd;
+		subjectFill = PolyFill.NonZero;
 		clipFill = PolyFill.EvenOdd;
 		
 		var stage = Lib.current.stage;
@@ -106,8 +106,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		testRandomPolyClipping ( 100, 10 );
-		return;
+		/*testRandomPolyClipping ( 100, 10 );
+		return;*/
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -148,7 +148,7 @@ class Main {
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: two clip polygons
+		/*// Test: two clip polygons
 		var subject = [
 			new Point ( 0, 100 ),
 			new Point ( 100, 250 ),
@@ -171,7 +171,7 @@ class Main {
 		
 		addInputPolygon ( subject, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
-		addInputPolygon ( clip2, PolyKind.Clip );
+		addInputPolygon ( clip2, PolyKind.Clip );*/
 		
 		
 		/*// Test: self-intersections with even-odd rule (vatti clip classic behavior)
@@ -740,7 +740,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: cross in circle nonzero test
+		// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -775,7 +775,7 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
 		
 		/*var angle = 0.0;
