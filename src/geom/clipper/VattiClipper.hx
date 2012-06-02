@@ -5,7 +5,6 @@ import flash.display.GraphicsPathWinding;
 import flash.geom.Point;
 import flash.Vector;
 import geom.ChainedPolygon;
-import geom.ClosedPolygonIterator;
 import geom.ConcatIterator;
 import geom.DoublyList;
 import geom.TakeIterator;
@@ -24,6 +23,18 @@ class VattiClipper {
 	 * Pointer to first node of the singly-linked list of scanbeams.
 	 */
 	private var sbl:Scanbeam;
+	/**
+	 * Bottom Y-coordinate of the current scanbeam.
+	 */
+	private var sbBottom:Float;
+	/**
+	 * Top Y-coordinate of the current scanbeam.
+	 */
+	private var sbTop:Float;
+	/**
+	 * Height of the current scanbeam.
+	 */
+	private var sbHeight:Float;
 	/**
 	 * Pointer to first node of the doubly-linked list of active edges i.e.
 	 * non-horizontal edges that intersected by current scanbeam.
@@ -50,7 +61,6 @@ class VattiClipper {
 	 * Currently processed clipping operation (Intersection, Difference, Union or XOR ).
 	 */
 	private var clipOp:ClipOperation;
-	
 	/**
 	 * Fill rule used for PolyKind.Subject polygons.
 	 */
@@ -64,13 +74,8 @@ class VattiClipper {
 	 */
 	private var thereIsWindingFill:Bool;
 	
-	public inline function getFillRule ( kind:PolyKind ):PolyFill {
-		return	kind == PolyKind.Subject ? subjectFill : clipFill;
-	}
-	
 	public inline function new () {
 		this.outPolys = new List <ChainedPolygon> ();
-		this.clipperState = ClipperState.NotStarted; // DEBUG
 	}
 	
 	/**
@@ -82,6 +87,7 @@ class VattiClipper {
 	 * cannot be NaN or +/-Infinity, it this case result is unpredictable and exceptions are possible.
 	 * TODO: make promise-like system attached to polygon geometrical characteristics as it was implemented
 	 * in previous developments of geometry library.
+	 * Also remember about restriction when dx or dy is infinite.
 	 */
 	public function addPolygon ( poly:Iterable <Point>, kind:PolyKind ):Void {
 		initLmlAndSbl ( poly, kind );
@@ -117,11 +123,11 @@ class VattiClipper {
 		this.clipFill = clipFill == null ? PolyFill.EvenOdd : clipFill;
 		this.thereIsWindingFill = this.subjectFill != PolyFill.EvenOdd || this.clipFill != PolyFill.EvenOdd;
 		
-		var yb = popScanbeam ();	// Bottom of current scanbeam
+		sbBottom = popScanbeam ();	// Bottom of the current scanbeam
 		
 		do {
-			addNewBoundPairs ( yb );		// Modifies ael
-			processHorizontalEdges ( yb );
+			addNewBoundPairs ();		// Modifies ael
+			processHorizontalEdges ();
 			
 			if ( sbl == null ) {
 				// It is only possible when all polygons
@@ -130,183 +136,17 @@ class VattiClipper {
 				return;
 			}
 			
-			var yt = popScanbeam ();	// Top of the current scan beam
+			sbTop = popScanbeam ();	// Top of the current scanbeam
+			sbHeight = sbTop - sbBottom;
 			
-			processIntersections ( yb, yt );
-			processEdgesInAel ( yb, yt );
-			processHorizontalEdges ( yt );
+			processIntersections ();
+			processEdgesInAel ();
 			
-			yb = yt;
+			sbBottom = sbTop;
+			sbHeight = 0;
+			processHorizontalEdges ();
 		} while ( sbl != null );
 	}
-	
-	// <clipStep>
-	public var clipperState:ClipperState;
-	public var cs_yb:Null <Float>;
-	public var cs_yt:Null <Float>;
-	
-	public function clipStep ():Bool {
-		if ( clipperState == ClipperState.Finished )
-			return	false;
-		
-		/*if ( sbl == null )	// Scanbeam list is empty
-			return	false;*/
-		
-		if ( clipperState == ClipperState.NotStarted ) {
-			cs_yb = popScanbeam ();	// Bottom of current scanbeam
-			
-			clipperState = ClipperState.AddNewBoundPairs;
-			
-			return	true;
-		}
-		
-		if ( clipperState == ClipperState.AddNewBoundPairs ) {
-			addNewBoundPairs ( cs_yb );	// Modifies ael
-			cs_yt = popScanbeam ();	// Top of the current scan beam
-			
-			clipperState = ClipperState.BuildIntersectionList;
-			
-			return	true;
-		}
-		
-		if ( clipperState == ClipperState.BuildIntersectionList ||
-			 clipperState == ClipperState.ProcessIntersectionList )
-		{
-			if ( !processIntersectionsStep ( cs_yb, cs_yt ) )
-				clipperState = ClipperState.ProcessEdgesInAel;
-			
-			return	true;
-		}
-		
-		if ( clipperState == ClipperState.ProcessEdgesInAel ) {
-			processEdgesInAel ( cs_yb, cs_yt );
-			
-			cs_yb = cs_yt;
-			cs_yt = null;
-			clipperState = sbl != null ? ClipperState.AddNewBoundPairs : ClipperState.Finished;
-			
-			return	sbl != null;
-		}
-		
-		return	sbl != null;
-	}
-	
-	private function processIntersectionsStep ( yb:Float, yt:Float ):Bool {
-		if ( ael == null ) {
-			clipperState = ClipperState.ProcessEdgesInAel;
-			
-			return	false;
-		}
-		
-		if ( clipperState == ClipperState.BuildIntersectionList ) {
-			buildIntersectionList ( yb, yt );
-			clipperState = ClipperState.ProcessIntersectionList;
-			
-			return	true;
-		}
-		
-		if ( clipperState == ClipperState.ProcessIntersectionList )
-			return	processIntersectionListStep ();
-		
-		return	false;
-	}
-	
-	private function processIntersectionListStep ():Bool {
-		if ( il == null )
-			return	false;
-		
-		var isec = il;
-		var prevIsec:Intersection = null;
-		
-		if ( !ActiveEdge.areAdjacent ( isec.e1Node, isec.e2Node ) ) {
-			do {
-				prevIsec = isec;
-				isec = isec.next;
-			} while ( !ActiveEdge.areAdjacent ( isec.e1Node, isec.e2Node ) );
-		}
-		
-		// e1 precedes e2 in AEL
-		var e1Node = isec.e1Node;
-		var e2Node = isec.e2Node;
-		var msg:String = "    ";
-		msg += e1Node.side + " " + e1Node.kind + " x " + e2Node.side + " " + e2Node.kind + "\n";
-		
-		if ( !ActiveEdge.areAdjacent ( e1Node, e2Node ) )
-			throw "ATTEMPT TO SWAP NON-ADJACENT NODES";
-		
-		if ( e1Node.kind == e2Node.kind ) {
-			msg += "Like edge intersection";
-			/* Like edge intersection:
-			 * (LC ∩ RC) or (RC ∩ LC) → LI and RI
-			 * (LS ∩ RS) or (RS ∩ LS) → LI and RI */
-			if ( e1Node.contributing ) {			// Then e2 is contributing also
-				if ( e1Node.side == Side.Left ) {	// Then we assume that e2 is right
-					addLeft ( e1Node, isec.p );
-					addRight ( e2Node, isec.p );
-					msg += "\naddLeft ( e1Node, isec.p );\naddRight ( e2Node, isec.p );";
-				} else {						// e1 is right e2 is left
-					addLeft ( e2Node, isec.p );
-					addRight ( e1Node, isec.p );
-					msg += "\naddLeft ( e2Node, isec.p );\naddRight ( e1Node, isec.p );";
-				}
-			} else
-				msg += " non-contributing";
-			
-			// Exchange side values of edges
-			var tmpSide = e1Node.side;
-			e1Node.side = e2Node.side;
-			e2Node.side = tmpSide;
-		} else if ( e1Node.side == Side.Left ) {
-			if ( e2Node.side == Side.Left ) { 				// (LC ∩ LS) or (LS ∩ LC) → LI
-				addLeft ( e2Node, isec.p );
-				msg += "addLeft ( e2Node, isec.p );";
-			} else /*if ( e2Node.side == Side.Right )*/ {	// (LS ∩ RC) or (LC ∩ RS) → MN
-				addLocalMin ( e1Node, e2Node, isec.p );
-				e1Node.contributing = false;
-				e2Node.contributing = false;
-				e1Node.poly = null;
-				e2Node.poly = null;
-				msg += "addLocalMin ( e1Node, e2Node, isec.p );";
-			}
-		} else /*if ( e1Node.side == Side.Right )*/ {
-			if ( e2Node.side == Side.Right ) {				// (RC ∩ RS) or (RS ∩ RC) → RI
-				addRight ( e1Node, isec.p );
-				msg += "addRight ( e1Node, isec.p );";
-			} else if ( e2Node.side == Side.Left ) { 		// (RS ∩ LC) or (RC ∩ LS) → MX
-				addLocalMax ( e1Node, e2Node, isec.p );
-				e1Node.contributing = true;
-				e2Node.contributing = true;
-				msg += "addLocalMax ( e1Node, e2Node, isec.p );";
-			}
-		}
-		
-		// Swap e1 and e2 position in AEL
-		ActiveEdge.swapAdjacent ( e1Node, e2Node );
-		
-		if ( e1Node.prev == null )
-			ael = e1Node;
-		else if ( e2Node.prev == null )
-			ael = e2Node;
-		
-		// Exchange adjPolyPtr pointers in edges
-		var tmpPoly = e1Node.poly;
-		e1Node.poly = e2Node.poly;
-		e2Node.poly = tmpPoly;
-		
-		var tmpContrib = e1Node.contributing;
-		e1Node.contributing = e2Node.contributing;
-		e2Node.contributing = tmpContrib;
-		
-		if ( prevIsec == null )
-			il = il.next;
-		else
-			prevIsec.next = isec.next;
-		
-		trace ( msg );
-		
-		return	il != null;
-	}
-	// </clipStep>
 	
 	private function initLmlAndSbl ( pts:Iterable <Point>, kind:PolyKind ):Void {
 		var it:Iterator <Point> = pts.iterator ();
@@ -650,9 +490,9 @@ class VattiClipper {
 		edge.dx = -edge.dx;
 	}
 	
-	private function addNewBoundPairs ( yb:Float ):Void {
-		while ( lml != null && lml.y == yb ) {
-			addEdgesToAel ( lml.edge1, lml.edge2, yb, lml.kind );
+	private function addNewBoundPairs ():Void {
+		while ( lml != null && lml.y == sbBottom ) {
+			addEdgesToAel ( lml.edge1, lml.edge2, lml.kind );
 			
 			// Delete bound pair from lml
 			var lm = lml;
@@ -661,15 +501,18 @@ class VattiClipper {
 		}
 	}
 	
+	public inline function getFillRule ( kind:PolyKind ):PolyFill {
+		return	kind == PolyKind.Subject ? subjectFill : clipFill;
+	}
+	
 	/**
 	 * Add edges edge1 and edge2 (or their nonhorizontal successors) to active edge list maintaining increasing x order.
 	 * Also set side and contributing fields of edge1 and edge2 using a parity argument.
 	 * @param	edge1	Increasing edge.
 	 * @param	edge2	Decreasing edge.
-	 * @param	yb		Bottom of the scanbeam.
 	 * @param	kind	Whether edges belong to subject or clip polygon?
 	 */
-	private function addEdgesToAel ( edge1:Edge, edge2:Edge, yb:Float, kind:PolyKind ):Void {
+	private function addEdgesToAel ( edge1:Edge, edge2:Edge, kind:PolyKind ):Void {
 		var thisFill = getFillRule ( kind );
 		var otherKind = kind == PolyKind.Subject ? PolyKind.Clip : PolyKind.Subject;
 		var otherFill = getFillRule ( otherKind );
@@ -784,8 +627,8 @@ class VattiClipper {
 		aelNode2.bottomXIntercept = edge1.bottomX;
 		aelNode1.topXIntercept = edge1.bottomX;	// Top-x intercept necessary for buildHorizontalIntersectionList ().
 		aelNode2.topXIntercept = edge1.bottomX;
-		aelNode1.bottomY = yb;
-		aelNode2.bottomY = yb;
+		aelNode1.bottomY = sbBottom;
+		aelNode2.bottomY = sbBottom;
 		
 		var cmp:Bool;	// Whether edge1 directed to the left relative to edge2?
 		
@@ -857,7 +700,7 @@ class VattiClipper {
 		aelNode2.contributing = contribVertex;
 		
 		if ( contribVertex )
-			addLocalMax ( aelNode1, aelNode2, new Point ( edge1.bottomX, yb ) );
+			processLocalMax ( aelNode1, aelNode2, new Point ( edge1.bottomX, sbBottom ) );
 	}
 	
 	private inline function addHorizontalEdge ( eNode:ActiveEdge ):Void {
@@ -867,7 +710,7 @@ class VattiClipper {
 			hel.insertNext ( eNode );
 	}
 	
-	private inline function addLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point ):Void {
+	private inline function processLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, p:Point ):Void {
 		var pNode:DoublyList <Point> = new DoublyList <Point> ( p );
 		var poly:ChainedPolygon = new ChainedPolygon ( pNode, pNode );
 		
@@ -877,10 +720,8 @@ class VattiClipper {
 	
 	/**
 	 * Active Edge List must have no horizontal edges.
-	 * @param	yb	Bottom of the scanbeam.
-	 * @param	yt	Top of the scanbeam.
 	 */
-	private function processEdgesInAel ( yb:Float, yt:Float ):Void {
+	private function processEdgesInAel ():Void {
 		if ( ael == null )
 			return;
 		
@@ -889,7 +730,7 @@ class VattiClipper {
 		do {
 			var edge = aelNode.edge;
 			
-			if ( edge.topY == yt ) {	// Edge terminates at the top of the scanbeam
+			if ( edge.topY == sbTop ) {	// Edge terminates at the top of the scanbeam
 				if ( edge.successor.isLocalMinima () ) {
 					var lMin = cast ( edge.successor, LocalMinima );
 					var otherEdge:Edge = edge == lMin.edge2 ? lMin.edge1 : lMin.edge2;
@@ -906,9 +747,9 @@ class VattiClipper {
 						continue;
 					}
 					
-					// Next edge should be also contributing and its topY should be equal to yt
+					// Next edge should be also contributing and its topY should be equal to sbTop
 					if ( aelNode.contributing )
-						addLocalMin ( aelNode, aelNode.next, new Point ( edge.successor.bottomX, yt ) );
+						processLocalMin ( aelNode, aelNode.next, new Point ( edge.successor.bottomX, sbTop ) );
 					
 					var nextAelNode:ActiveEdge = aelNode.next.next;
 					aelNode.removeNext ();
@@ -922,7 +763,7 @@ class VattiClipper {
 					continue;
 				} else {
 					if ( aelNode.contributing ) {
-						var p = new Point ( edge.successor.bottomX, yt );
+						var p = new Point ( edge.successor.bottomX, sbTop );
 						
 						if ( aelNode.side == Side.Left )
 							addLeft ( aelNode, p );
@@ -932,7 +773,7 @@ class VattiClipper {
 					
 					aelNode.edge = edge.successor;
 					aelNode.bottomXIntercept = aelNode.edge.bottomX;
-					aelNode.bottomY = yt;
+					aelNode.bottomY = sbTop;
 					
 					addScanbeam ( edge.successor.topY );
 					
@@ -988,9 +829,9 @@ class VattiClipper {
 				
 				var nextAelNode:ActiveEdge = aelNode2.next;
 				
-				// Next edge should be also contributing and its topY should be equal to yt
+				// Next edge should be also contributing and its topY should be equal to sbTop
 				if ( aelNode1.contributing )
-					addLocalMin ( aelNode1, aelNode2, new Point ( edge.successor.bottomX, edge.topY ) );
+					processLocalMin ( aelNode1, aelNode2, new Point ( edge.successor.bottomX, edge.topY ) );
 				
 				aelNode1.removeSelf ();
 				aelNode2.removeSelf ();
@@ -1063,10 +904,10 @@ class VattiClipper {
 		}
 	}
 	
-	private inline function processHorizontalEdges ( y:Float ):Void {
+	private inline function processHorizontalEdges ():Void {
 		while ( hel != null && ael != null ) {
-			buildHorizontalIntersectionList ( y );
-			processIntersectionList ( y, y );	// Zero-height scanbeam
+			buildHorizontalIntersectionList ();
+			processIntersectionList ();	// Zero-height scanbeam
 			processEdgesInAelHorizontal ();
 		}
 	}
@@ -1079,7 +920,7 @@ class VattiClipper {
 		aelNode.poly.appendPoint ( p );
 	}
 	
-	private inline function addLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void {
+	private inline function processLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void {
 		if ( aelNode1.side == Side.Left )
 			addLeft ( aelNode1, p );
 		else
@@ -1144,28 +985,27 @@ class VattiClipper {
 		}
 	}
 	
-	private function processIntersections ( yb:Float, yt:Float ):Void {
+	private function processIntersections ():Void {
 		if ( ael == null )
 			return;
 		
-		buildIntersectionList ( yb, yt );
-		processIntersectionList ( yb, yt );
+		buildIntersectionList ();
+		processIntersectionList ();
 	}
 	
-	private function buildIntersectionList ( yb:Float, yt:Float ):Void {
+	private function buildIntersectionList ():Void {
 		il = null; // Initialize IL to empty;
 		ilLast = null;
-		var dy = yt - yb;
 		
 		// Set Sorted Edge List to first node in Active Edge List
 		var selLeft = new DoublyList <ActiveEdge> ( ael );
 		var selRight = selLeft;
 		
-		ael.topXIntercept = ael.topX ( yt );
+		ael.topXIntercept = ael.topX ( sbTop );
 		var e1Node = ael.next;
 		
 		while ( e1Node != null ) {
-			e1Node.topXIntercept = e1Node.topX ( yt );
+			e1Node.topXIntercept = e1Node.topX ( sbTop );
 			
 			/* Starting with the rightmost node of SEL we shall now move from right
 			 * to left through the nodes of SEL checking for an intersection with e1.
@@ -1174,7 +1014,7 @@ class VattiClipper {
 			
 			while ( e2Node != null && e1Node.topXIntercept < e2Node.value.topXIntercept ) {
 				// Make deferred intersection.
-				var isec = intersectionOf ( e2Node.value, e1Node, yb, dy );	// e2 is to the left of the e1 in the ael
+				var isec = intersectionOf ( e2Node.value, e1Node );	// e2 is to the left of the e1 in the ael
 				addIntersection ( isec );
 				
 				// Update e2 to denote edge to its left in SEL
@@ -1198,10 +1038,10 @@ class VattiClipper {
 			e1Node = e1Node.next;
 		}
 		
-		buildApexIntersections ( selLeft, selRight, yt, true );
+		buildApexIntersections ( selLeft, selRight, true );
 	}
 	
-	private function buildHorizontalIntersectionList ( yb:Float ):Void {
+	private function buildHorizontalIntersectionList ():Void {
 		il = null; // Initialize IL to empty;
 		ilLast = null;
 		
@@ -1250,7 +1090,7 @@ class VattiClipper {
 			e1Node = e1Node.next;
 		}
 		
-		buildApexIntersections ( selLeft, selRight, yb, false );
+		buildApexIntersections ( selLeft, selRight, false );
 	}
 	
 	/**
@@ -1258,12 +1098,11 @@ class VattiClipper {
 	 * using standard algorithm such as buildIntersectionList ().
 	 * @param	selLeft	First element of Sorted Edge List.
 	 * @param	selRight	Last element of Sorted Edge List.
-	 * @param	yt	Y-coordinate of top of the scanbeam.
 	 * @param	skipHorizontalPair	Should we skip terminating edge when its pairing edge is horizontal?
 	 */
-	private function buildApexIntersections ( selLeft:DoublyList <ActiveEdge>, selRight:DoublyList <ActiveEdge>, yt:Float, skipHorizontalPair:Bool ):Void {
+	private function buildApexIntersections ( selLeft:DoublyList <ActiveEdge>, selRight:DoublyList <ActiveEdge>, skipHorizontalPair:Bool ):Void {
 		do {
-			if ( selLeft.value.edge.topY == yt && selLeft.value.edge.successor.isLocalMinima () ) {
+			if ( selLeft.value.edge.topY == sbTop && selLeft.value.edge.successor.isLocalMinima () ) {
 				var lMin = cast ( selLeft.value.edge.successor, LocalMinima );
 				var otherEdge:Edge = selLeft.value.edge == lMin.edge2 ? lMin.edge1 : lMin.edge2;
 				
@@ -1281,11 +1120,12 @@ class VattiClipper {
 				while ( selRight != null && selRight.value.edge != otherEdge ) { selRight = selRight.next; }
 				
 				if ( selRight == null ) {
-					// There are two possible cases:
-					// 1. Other edge ending at local minima is horizontal while selLeft is not.
-					// 2. Both edges are horizontal but one of the bellows have more horizontal edges
-					//   than the other and that's why it does not ends right now.
-					// We must defer its processing.
+					/* There are two possible cases:
+					 * 1. Other edge ending at local minima is horizontal while selLeft is not.
+					 *	This case will be handled faster if skipHorizontalPair argument is set to true.
+					 * 2. Both edges are horizontal but one of the bellows have more horizontal edges
+					 * 	than the other and that's why it does not ends right now.
+					 * We must defer its processing.*/
 					
 					if ( !otherEdge.isHorizontal )
 						throw "Assertion failed";
@@ -1304,7 +1144,7 @@ class VattiClipper {
 						new Point ( lMin.bottomX, lMin.topY ), Math.POSITIVE_INFINITY );
 					DoublyList.swapAdjacent ( selRight.prev, selRight );
 					
-					// Add isec to the END of the il
+					// Add isec to the END of the IL
 					addIntersectionLast ( isec );
 				}
 				
@@ -1341,13 +1181,11 @@ class VattiClipper {
 	/**
 	 * Creates deferred Intersection object which is in turn aimed to find intersection point of two edges.
 	 * Note that it should be known apriori that two given edges intersects.
-	 * @param	e1	First edge known to intersect other edge.
-	 * @param	e2	Second edge. Should be to the right of the e1 in Active Edge List!
-	 * @param	yb	Bottom of the scanbeam.
-	 * @param	dy	Difference between top and bottom of the scanbeam.
+	 * @param	e1Node	First edge AEL node known to intersect other edge.
+	 * @param	e2Node	Second edge AEL node. Should be to the right of the e1 in Active Edge List!
 	 * @return	Intersection of two edges.
 	 */
-	private static inline function intersectionOf ( e1Node:ActiveEdge, e2Node:ActiveEdge, yb:Float, dy:Float ):Intersection {
+	private static inline function intersectionOf ( e1Node:ActiveEdge, e2Node:ActiveEdge ):Intersection {
 		/* Let dxt be absolute value of difference between top x intercepts.
 		 * Let dxb be absolute value of difference between bottom x intercepts.
 		 * Given dxb and dxt we can calculate ratio k = dxb / dxt which
@@ -1363,9 +1201,7 @@ class VattiClipper {
 		return	new Intersection ( e1Node, e2Node, null, k );
 	}
 	
-	private function processIntersectionList ( yb:Float, yt:Float ):Void {
-		var dy = yt - yb;
-		
+	private function processIntersectionList ():Void {
 		while ( il != null ) {
 			var isec = il;
 			var prevIsec:Intersection = null;
@@ -1377,312 +1213,316 @@ class VattiClipper {
 				} while ( !ActiveEdge.areAdjacent ( isec.e1Node, isec.e2Node ) );
 			}
 			
-			// e1Node precedes e2Node in AEL
-			var e1Node:ActiveEdge = isec.e1Node;
-			var e2Node:ActiveEdge = isec.e2Node;
-			var areNotInteract:Bool = false;	// If one or both edges were ghost(s) then they are not interact
-			
-			if ( e1Node.kind == e2Node.kind ) {
-				var thisFill = getFillRule ( e1Node.kind );
-				
-				if ( thisFill == PolyFill.EvenOdd ) {
-					/* Like edge intersection:
-					 * (LC × RC) or (RC × LC) → LI and RI
-					 * (LS × RS) or (RS × LS) → LI and RI */
-					if ( e1Node.contributing ) {			// Then e2Node is contributing also
-						isec.calculateIntersectionPoint ( yb, dy );
-						
-						if ( e1Node.side == Side.Left ) {
-							addLeft ( e1Node, isec.p );
-							addRight ( e2Node, isec.p );
-						} else {
-							addLeft ( e2Node, isec.p );
-							addRight ( e1Node, isec.p );
-						}
-					}
-					
-					swapSides ( e1Node, e2Node );
-				} else /*if ( thisFill == PolyFill.NonZero )*/ {
-					/* Classify self-intersection.
-					 * Code below uses notation [Case #] to denote
-					 * correponding illustration from "doc/nonzero_isecs.svg" file.*/
-					var e1WinNode = e1Node.asWindingEdge;
-					var e2WinNode = e2Node.asWindingEdge;
-					var ws1:Int = AbsInt ( e1WinNode.windingSum );
-					var ws2:Int = AbsInt ( e2WinNode.windingSum );
-					
-					if ( ws1 == 1 ) {
-						if ( ws2 == 2 && e1WinNode.winding == e2WinNode.winding ) {	// 1 × 2 → LI, [Case 1 and 2]
-							if ( e1Node.contributing ) {
-								isec.calculateIntersectionPoint ( yb, dy );
-								
-								if ( e1Node.side == Side.Left )
-									addLeft ( e1Node, isec.p );
-								else
-									addRight ( e1Node, isec.p );
-							}
-							
-							e2Node.side = e1Node.side;	// Inherit side
-							e1WinNode.isGhost = true;
-							e2WinNode.isGhost = false;
-						} else /*if ( ws2 == 0 )*/ {
-							if ( e1WinNode.winding == e2WinNode.winding ) {	// 1 × 0 (same winding) → RI, [Case 9 and 10]
-								if ( e2Node.contributing ) {
-									isec.calculateIntersectionPoint ( yb, dy );
-									
-									if ( e2Node.side == Side.Right )
-										addRight ( e2Node, isec.p );
-									else
-										addLeft ( e2Node, isec.p );
-								}
-								
-								e1Node.side = e2Node.side;	// Inherit side
-								e2WinNode.isGhost = true;
-								e1WinNode.isGhost = false;
-							} else {	// 1 × 0 (diff winding) → LI and RI, [Case 3 and 4]
-								if ( e1Node.contributing ) {	// Then e2Node is also contributing
-									isec.calculateIntersectionPoint ( yb, dy );
-									
-									if ( e1Node.side == Side.Left ) {	// Then e2Node's side is right
-										addLeft ( e1Node, isec.p );
-										addRight ( e2Node, isec.p );
-									} else {
-										addRight ( e1Node, isec.p );
-										addLeft ( e2Node, isec.p );
-									}
-								}
-								
-								swapSides ( e1Node, e2Node );
-							}
-						}
-					} else if ( ws1 == 0 /*&& ws2 == 1*/ ) {
-						if ( e1WinNode.winding == e2WinNode.winding ) {	// 0 × 1 (same winding) → RI and LI, [Case 5 and 6]
-							if ( e1Node.contributing ) {	// Then e2Node is also contributing
-								isec.calculateIntersectionPoint ( yb, dy );
-								
-								if ( e1Node.side == Side.Right ) {	// Then e2Node's side is left
-									addRight ( e1Node, isec.p );
-									addLeft ( e2Node, isec.p );
-								} else {
-									addLeft ( e1Node, isec.p );
-									addRight ( e2Node, isec.p );
-								}
-							}
-							
-							swapSides ( e1Node, e2Node );
-						} else {	// 0 × 1 (diff winding) → MN, [Case 7 and 8]
-							if ( e1Node.contributing ) {	// Then e2Node is also contributing
-								isec.calculateIntersectionPoint ( yb, dy );
-								
-								addLocalMin ( e1Node, e2Node, isec.p );
-								e1Node.contributing = false;
-								e2Node.contributing = false;
-								e1Node.poly = null;
-								e2Node.poly = null;
-							}
-							
-							e1WinNode.isGhost = true;
-							e2WinNode.isGhost = true;
-						}
-					} else if ( ws1 == 2 && ws2 == 1 && e1WinNode.winding != e2WinNode.winding ) {	// 2 × 1 → MX, [Case 11 and 12]
-						var thisKind = e1Node.kind;
-						var otherKind = thisKind == PolyKind.Subject ? PolyKind.Clip : PolyKind.Subject;
-						var otherFill = getFillRule ( otherKind );
-						
-						// Calculate insideness
-						var insideThis:Bool, insideOther:Bool;
-						var numLikeEdges:Int = 0;
-						var numUnlikeEdges:Int = 0;
-						var thisWindingSum:Int = 0;
-						var otherWindingSum:Int = 0;
-						var aelNode = e1Node.prev;
-						
-						if ( thisFill == PolyFill.EvenOdd ) {
-							if ( otherFill == PolyFill.EvenOdd ) {
-								while ( aelNode != null ) {
-									if ( aelNode.kind == thisKind )
-										numLikeEdges++;
-									else
-										numUnlikeEdges++;
-									
-									aelNode = aelNode.prev;
-								}
-								
-								insideOther = numUnlikeEdges % 2 == 1;
-							} else /*if ( otherFill == PolyFill.NonZero )*/ {
-								while ( aelNode != null ) {
-									if ( aelNode.kind == thisKind )
-										numLikeEdges++;
-									else {
-										otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
-										aelNode = aelNode.prev;
-										
-										break;
-									}
-									
-									aelNode = aelNode.prev;
-								}
-								
-								while ( aelNode != null ) {
-									if ( aelNode.kind == thisKind )
-										numLikeEdges++;
-									
-									aelNode = aelNode.prev;
-								}
-								
-								insideOther = otherWindingSum != 0;
-							}
-							
-							insideThis = numLikeEdges % 2 == 1;
-						} else /*if ( thisFill == PolyFill.NonZero )*/ {
-							if ( otherFill == PolyFill.EvenOdd ) {
-								while ( aelNode != null ) {
-									if ( aelNode.kind == otherKind )
-										numUnlikeEdges++;
-									
-									aelNode = aelNode.prev;
-								}
-								
-								insideOther = numUnlikeEdges % 2 == 1;
-							} else /*if ( otherFill == PolyFill.NonZero )*/ {
-								while ( aelNode != null ) {
-									if ( aelNode.kind == otherKind ) {
-										otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
-										
-										break;
-									}
-									
-									aelNode = aelNode.prev;
-								}
-								
-								insideOther = otherWindingSum != 0;
-							}
-							
-							thisWindingSum = e1WinNode.windingSum - e1WinNode.winding;
-							insideThis = thisWindingSum != 0;
-						}
-						
-						var likeEdgesEven:Bool;
-						var contribVertex:Bool;
-						
-						if ( clipOp == ClipOperation.Intersection ) {
-							likeEdgesEven = !insideThis;
-							contribVertex = insideOther;
-						} else if ( clipOp == ClipOperation.Difference ) {
-							if ( !insideOther )
-								contribVertex = thisKind == PolyKind.Subject;
-							else
-								contribVertex = thisKind == PolyKind.Clip;
-							
-							if ( thisKind == PolyKind.Subject )
-								likeEdgesEven = !insideThis;
-							else
-								likeEdgesEven = insideThis;	// Invert sides
-						} else if ( clipOp == ClipOperation.Union ) {
-							likeEdgesEven = !insideThis;
-							contribVertex = !insideOther;
-						} else /*if ( clipOp == ClipOperation.Xor )*/ {
-							likeEdgesEven = ( !insideThis ) == ( !insideOther );
-							contribVertex = true;
-						}
-						
-						if ( likeEdgesEven ) {
-							// e2Node will be to the left of e1Node after swapping
-							e2Node.side = Side.Left;
-							e1Node.side = Side.Right;
-						} else {
-							e1Node.side = Side.Left;
-							e2Node.side = Side.Right;
-						}
-						
-						if ( contribVertex ) {
-							isec.calculateIntersectionPoint ( yb, dy );
-							addLocalMax ( e1Node, e2Node, isec.p );
-							e1Node.contributing = true;
-							e2Node.contributing = true;
-						}
-						
-						e1WinNode.isGhost = false;
-						e2WinNode.isGhost = false;
-					}
-					
-					e1WinNode.windingSum = e2WinNode.windingSum;
-					e2WinNode.windingSum -= e1WinNode.winding;
-				}
-			} else {
-				// Check whether any of the edges is a ghost
-				var thereIsGhost:Bool = thereIsWindingFill &&
-					( ( e1Node.asWindingEdge != null && e1Node.asWindingEdge.isGhost ) ||
-					  ( e2Node.asWindingEdge != null && e2Node.asWindingEdge.isGhost ) );
-				
-				if ( !thereIsGhost ) {
-					isec.calculateIntersectionPoint ( yb, dy );
-					
-					if ( clipOp != ClipOperation.Xor ) {
-						var isecType = isec.classify ( clipOp );
-						
-						switch ( isecType ) {
-						case IntersectionType.LeftIntermediate:
-							if ( clipOp == ClipOperation.Union )
-								addLeft ( e1Node, isec.p );
-							else
-								addLeft ( e2Node, isec.p );
-						case IntersectionType.RightIntermediate:
-							if ( clipOp == ClipOperation.Union )
-								addRight ( e2Node, isec.p );
-							else
-								addRight ( e1Node, isec.p );
-						case IntersectionType.LocalMinima:
-							addLocalMin ( e1Node, e2Node, isec.p );
-							e1Node.contributing = false;
-							e2Node.contributing = false;
-							e1Node.poly = null;
-							e2Node.poly = null;
-						case IntersectionType.LocalMaxima:
-							addLocalMax ( e1Node, e2Node, isec.p );
-							e1Node.contributing = true;
-							e2Node.contributing = true;
-						}
-					} else {
-						if ( e1Node.side == Side.Left )
-							addLeft ( e1Node, isec.p );
-						else
-							addRight ( e1Node, isec.p );
-						
-						if ( e2Node.side == Side.Left )
-							addLeft ( e2Node, isec.p );
-						else
-							addRight ( e2Node, isec.p );
-						
-						swapSides ( e1Node, e2Node );
-					}
-				} else
-					areNotInteract = true;
-			}
+			processIntersection ( isec );
 			
 			// Swap e1Node and e2Node position in AEL
-			ActiveEdge.swapAdjacent ( e1Node, e2Node );
+			ActiveEdge.swapAdjacent ( isec.e1Node, isec.e2Node );
 			
 			if ( isec.e1Node.prev == null )
 				ael = isec.e1Node;
 			else if ( isec.e2Node.prev == null )
 				ael = isec.e2Node;
 			
-			if ( !areNotInteract ) {
-				// Exchange adjPolyPtr pointers in edges
-				var tmpPoly = e1Node.poly;
-				e1Node.poly = e2Node.poly;
-				e2Node.poly = tmpPoly;
-				
-				var tmpContrib = e1Node.contributing;
-				e1Node.contributing = e2Node.contributing;
-				e2Node.contributing = tmpContrib;
-			}
-			
 			if ( prevIsec == null )
 				il = il.next;
 			else
 				prevIsec.next = isec.next;
+		}
+	}
+	
+	private function processIntersection ( isec:Intersection ):Void {
+		// e1Node precedes e2Node in AEL
+		var e1Node:ActiveEdge = isec.e1Node;
+		var e2Node:ActiveEdge = isec.e2Node;
+		var areNotInteract:Bool = false;	// If one or both edges were ghost(s) then they are not interact
+		
+		if ( e1Node.kind == e2Node.kind ) {
+			var thisFill = getFillRule ( e1Node.kind );
+			
+			if ( thisFill == PolyFill.EvenOdd ) {
+				/* Like edge intersection:
+				 * (LC × RC) or (RC × LC) → LI and RI
+				 * (LS × RS) or (RS × LS) → LI and RI */
+				if ( e1Node.contributing ) {			// Then e2Node is contributing also
+					isec.calculateIntersectionPoint ( sbBottom, sbHeight );
+					
+					if ( e1Node.side == Side.Left ) {
+						addLeft ( e1Node, isec.p );
+						addRight ( e2Node, isec.p );
+					} else {
+						addLeft ( e2Node, isec.p );
+						addRight ( e1Node, isec.p );
+					}
+				}
+				
+				swapSides ( e1Node, e2Node );
+			} else /*if ( thisFill == PolyFill.NonZero )*/ {
+				/* Classify self-intersection.
+				 * Code below uses notation [Case #] to denote
+				 * correponding illustration from "doc/nonzero_isecs.svg" file.*/
+				var e1WinNode = e1Node.asWindingEdge;
+				var e2WinNode = e2Node.asWindingEdge;
+				var ws1:Int = AbsInt ( e1WinNode.windingSum );
+				var ws2:Int = AbsInt ( e2WinNode.windingSum );
+				
+				if ( ws1 == 1 ) {
+					if ( ws2 == 2 && e1WinNode.winding == e2WinNode.winding ) {	// 1 × 2 → LI, [Case 1 and 2]
+						if ( e1Node.contributing ) {
+							isec.calculateIntersectionPoint ( sbBottom, sbHeight );
+							
+							if ( e1Node.side == Side.Left )
+								addLeft ( e1Node, isec.p );
+							else
+								addRight ( e1Node, isec.p );
+						}
+						
+						e2Node.side = e1Node.side;	// Inherit side
+						e1WinNode.isGhost = true;
+						e2WinNode.isGhost = false;
+					} else /*if ( ws2 == 0 )*/ {
+						if ( e1WinNode.winding == e2WinNode.winding ) {	// 1 × 0 (same winding) → RI, [Case 9 and 10]
+							if ( e2Node.contributing ) {
+								isec.calculateIntersectionPoint ( sbBottom, sbHeight );
+								
+								if ( e2Node.side == Side.Right )
+									addRight ( e2Node, isec.p );
+								else
+									addLeft ( e2Node, isec.p );
+							}
+							
+							e1Node.side = e2Node.side;	// Inherit side
+							e2WinNode.isGhost = true;
+							e1WinNode.isGhost = false;
+						} else {	// 1 × 0 (diff winding) → LI and RI, [Case 3 and 4]
+							if ( e1Node.contributing ) {	// Then e2Node is also contributing
+								isec.calculateIntersectionPoint ( sbBottom, sbHeight );
+								
+								if ( e1Node.side == Side.Left ) {	// Then e2Node's side is right
+									addLeft ( e1Node, isec.p );
+									addRight ( e2Node, isec.p );
+								} else {
+									addRight ( e1Node, isec.p );
+									addLeft ( e2Node, isec.p );
+								}
+							}
+							
+							swapSides ( e1Node, e2Node );
+						}
+					}
+				} else if ( ws1 == 0 /*&& ws2 == 1*/ ) {
+					if ( e1WinNode.winding == e2WinNode.winding ) {	// 0 × 1 (same winding) → RI and LI, [Case 5 and 6]
+						if ( e1Node.contributing ) {	// Then e2Node is also contributing
+							isec.calculateIntersectionPoint ( sbBottom, sbHeight );
+							
+							if ( e1Node.side == Side.Right ) {	// Then e2Node's side is left
+								addRight ( e1Node, isec.p );
+								addLeft ( e2Node, isec.p );
+							} else {
+								addLeft ( e1Node, isec.p );
+								addRight ( e2Node, isec.p );
+							}
+						}
+						
+						swapSides ( e1Node, e2Node );
+					} else {	// 0 × 1 (diff winding) → MN, [Case 7 and 8]
+						if ( e1Node.contributing ) {	// Then e2Node is also contributing
+							isec.calculateIntersectionPoint ( sbBottom, sbHeight );
+							
+							processLocalMin ( e1Node, e2Node, isec.p );
+							e1Node.contributing = false;
+							e2Node.contributing = false;
+							e1Node.poly = null;
+							e2Node.poly = null;
+						}
+						
+						e1WinNode.isGhost = true;
+						e2WinNode.isGhost = true;
+					}
+				} else if ( ws1 == 2 && ws2 == 1 && e1WinNode.winding != e2WinNode.winding ) {	// 2 × 1 → MX, [Case 11 and 12]
+					var thisKind = e1Node.kind;
+					var otherKind = thisKind == PolyKind.Subject ? PolyKind.Clip : PolyKind.Subject;
+					var otherFill = getFillRule ( otherKind );
+					
+					// Calculate insideness
+					var insideThis:Bool, insideOther:Bool;
+					var numLikeEdges:Int = 0;
+					var numUnlikeEdges:Int = 0;
+					var thisWindingSum:Int = 0;
+					var otherWindingSum:Int = 0;
+					var aelNode = e1Node.prev;
+					
+					if ( thisFill == PolyFill.EvenOdd ) {
+						if ( otherFill == PolyFill.EvenOdd ) {
+							while ( aelNode != null ) {
+								if ( aelNode.kind == thisKind )
+									numLikeEdges++;
+								else
+									numUnlikeEdges++;
+								
+								aelNode = aelNode.prev;
+							}
+							
+							insideOther = numUnlikeEdges % 2 == 1;
+						} else /*if ( otherFill == PolyFill.NonZero )*/ {
+							while ( aelNode != null ) {
+								if ( aelNode.kind == thisKind )
+									numLikeEdges++;
+								else {
+									otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+									aelNode = aelNode.prev;
+									
+									break;
+								}
+								
+								aelNode = aelNode.prev;
+							}
+							
+							while ( aelNode != null ) {
+								if ( aelNode.kind == thisKind )
+									numLikeEdges++;
+								
+								aelNode = aelNode.prev;
+							}
+							
+							insideOther = otherWindingSum != 0;
+						}
+						
+						insideThis = numLikeEdges % 2 == 1;
+					} else /*if ( thisFill == PolyFill.NonZero )*/ {
+						if ( otherFill == PolyFill.EvenOdd ) {
+							while ( aelNode != null ) {
+								if ( aelNode.kind == otherKind )
+									numUnlikeEdges++;
+								
+								aelNode = aelNode.prev;
+							}
+							
+							insideOther = numUnlikeEdges % 2 == 1;
+						} else /*if ( otherFill == PolyFill.NonZero )*/ {
+							while ( aelNode != null ) {
+								if ( aelNode.kind == otherKind ) {
+									otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
+									
+									break;
+								}
+								
+								aelNode = aelNode.prev;
+							}
+							
+							insideOther = otherWindingSum != 0;
+						}
+						
+						thisWindingSum = e1WinNode.windingSum - e1WinNode.winding;
+						insideThis = thisWindingSum != 0;
+					}
+					
+					var likeEdgesEven:Bool;
+					var contribVertex:Bool;
+					
+					if ( clipOp == ClipOperation.Intersection ) {
+						likeEdgesEven = !insideThis;
+						contribVertex = insideOther;
+					} else if ( clipOp == ClipOperation.Difference ) {
+						if ( !insideOther )
+							contribVertex = thisKind == PolyKind.Subject;
+						else
+							contribVertex = thisKind == PolyKind.Clip;
+						
+						if ( thisKind == PolyKind.Subject )
+							likeEdgesEven = !insideThis;
+						else
+							likeEdgesEven = insideThis;	// Invert sides
+					} else if ( clipOp == ClipOperation.Union ) {
+						likeEdgesEven = !insideThis;
+						contribVertex = !insideOther;
+					} else /*if ( clipOp == ClipOperation.Xor )*/ {
+						likeEdgesEven = ( !insideThis ) == ( !insideOther );
+						contribVertex = true;
+					}
+					
+					if ( likeEdgesEven ) {
+						// e2Node will be to the left of e1Node after swapping
+						e2Node.side = Side.Left;
+						e1Node.side = Side.Right;
+					} else {
+						e1Node.side = Side.Left;
+						e2Node.side = Side.Right;
+					}
+					
+					if ( contribVertex ) {
+						isec.calculateIntersectionPoint ( sbBottom, sbHeight );
+						processLocalMax ( e1Node, e2Node, isec.p );
+						e1Node.contributing = true;
+						e2Node.contributing = true;
+					}
+					
+					e1WinNode.isGhost = false;
+					e2WinNode.isGhost = false;
+				}
+				
+				e1WinNode.windingSum = e2WinNode.windingSum;
+				e2WinNode.windingSum -= e1WinNode.winding;
+			}
+		} else {
+			// Check whether any of the edges is a ghost
+			var thereIsGhost:Bool = thereIsWindingFill &&
+				( ( e1Node.asWindingEdge != null && e1Node.asWindingEdge.isGhost ) ||
+				  ( e2Node.asWindingEdge != null && e2Node.asWindingEdge.isGhost ) );
+			
+			if ( !thereIsGhost ) {
+				isec.calculateIntersectionPoint ( sbBottom, sbHeight );
+				
+				if ( clipOp != ClipOperation.Xor ) {
+					var isecType = isec.classify ( clipOp );
+					
+					switch ( isecType ) {
+					case IntersectionType.LeftIntermediate:
+						if ( clipOp == ClipOperation.Union )
+							addLeft ( e1Node, isec.p );
+						else
+							addLeft ( e2Node, isec.p );
+					case IntersectionType.RightIntermediate:
+						if ( clipOp == ClipOperation.Union )
+							addRight ( e2Node, isec.p );
+						else
+							addRight ( e1Node, isec.p );
+					case IntersectionType.LocalMinima:
+						processLocalMin ( e1Node, e2Node, isec.p );
+						e1Node.contributing = false;
+						e2Node.contributing = false;
+						e1Node.poly = null;
+						e2Node.poly = null;
+					case IntersectionType.LocalMaxima:
+						processLocalMax ( e1Node, e2Node, isec.p );
+						e1Node.contributing = true;
+						e2Node.contributing = true;
+					}
+				} else {
+					if ( e1Node.side == Side.Left )
+						addLeft ( e1Node, isec.p );
+					else
+						addRight ( e1Node, isec.p );
+					
+					if ( e2Node.side == Side.Left )
+						addLeft ( e2Node, isec.p );
+					else
+						addRight ( e2Node, isec.p );
+					
+					swapSides ( e1Node, e2Node );
+				}
+			} else
+				areNotInteract = true;
+		}
+		
+		if ( !areNotInteract ) {
+			// Exchange adjPolyPtr pointers in edges
+			var tmpPoly = e1Node.poly;
+			e1Node.poly = e2Node.poly;
+			e2Node.poly = tmpPoly;
+			
+			var tmpContrib = e1Node.contributing;
+			e1Node.contributing = e2Node.contributing;
+			e2Node.contributing = tmpContrib;
 		}
 	}
 	
@@ -1852,77 +1692,6 @@ class VattiClipper {
 		}
 	}
 	
-	/* We can draw ael with color legend illustrating its:
-	 * 1. Contributing status
-	 * 2. 'poly' field
-	 * 3. 'kind' field (clip/subject)
-	 * 4. 'side' field (left/right)
-	 * 5. Position in ael*/
-	public function drawAelBySide ( graphics:Graphics, zoom:Float = 1.0 ):Void {
-		if ( cs_yb == null || cs_yt == null )
-			return;
-		
-		var aelNode = ael;
-		
-		while ( aelNode != null ) {
-			drawAelNodeBySide ( graphics, aelNode, zoom );
-			
-			aelNode = aelNode.next;
-		}
-	}
-	
-	private function drawAelNodeBySide ( graphics:Graphics, aelNode:ActiveEdge, zoom:Float = 1.0 ):Void {
-		var dy = cs_yt - cs_yb;
-		var e = aelNode.edge;
-		var topX = aelNode.topX ( cs_yt );
-		
-		var color = aelNode.side == Side.Left ? 0xff0000 : 0x00ff00;
-		graphics.lineStyle ( 1 / zoom, color, 1 );
-		graphics.moveTo ( aelNode.bottomXIntercept, cs_yb );
-		graphics.lineTo ( topX, cs_yt );
-	}
-	
-	public function drawAelByPoly ( graphics:Graphics ):Void {
-		if ( cs_yb == null || cs_yt == null )
-			return;
-		
-		var polys = new List <ChainedPolygon> ();
-		var aelNode = ael;
-		
-		while ( aelNode != null ) {
-			if ( aelNode.contributing ) {
-				if ( !Lambda.has ( polys, aelNode.poly ) )
-					polys.add ( aelNode.poly );
-			}
-			
-			aelNode = aelNode.next;
-		}
-		
-		var colorDelta = polys.length < 2 ? 0 : 255 / ( polys.length - 1 );
-		
-		var dy = cs_yt - cs_yb;
-		aelNode = ael;
-		
-		while ( aelNode != null ) {
-			var e = aelNode.edge;
-			var topX = aelNode.topX ( cs_yt );
-			
-			var color:UInt;
-			
-			if ( aelNode.contributing ) {
-				var polyIdx = Lambda.indexOf ( polys, aelNode.poly );
-				color = Std.int ( polyIdx * colorDelta ) << 8;
-			} else
-				color = 0x445599;
-			
-			graphics.lineStyle ( 1, color, 1 );
-			graphics.moveTo ( aelNode.bottomXIntercept, cs_yb );
-			graphics.lineTo ( topX, cs_yt );
-			
-			aelNode = aelNode.next;
-		}
-	}
-	
 	public function drawContributedPolys ( graphics:Graphics,
 		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
 		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
@@ -1960,137 +1729,5 @@ class VattiClipper {
 			drawPoly ( poly, graphics );
 			endDrawPoly ( graphics );
 		}
-	}
-	
-	public function drawCurrentScanbeam ( graphics:Graphics, zoom:Float = 1.0 ):Void {
-		if ( cs_yb != null ) {
-			graphics.lineStyle ( 1 / zoom, 0xaa9900, 1 );
-			graphics.moveTo ( -10000, cs_yb );
-			graphics.lineTo ( 10000, cs_yb );
-		}
-		
-		if ( cs_yt != null ) {
-			graphics.lineStyle ( 1 / zoom, 0x99aa00, 1 );
-			graphics.moveTo ( -10000, cs_yt );
-			graphics.lineTo ( 10000, cs_yt );
-		}
-		
-		if ( cs_yb != null && cs_yt != null ) {
-			graphics.lineStyle ( 0, 0, 0 );
-			graphics.beginFill ( 0x9957aa, 0.3 );
-			graphics.drawRect ( -10000, cs_yb, 20000, cs_yt - cs_yb );
-			graphics.endFill ();
-		}
-	}
-	
-	public function drawIntersectionScanline ( graphics:Graphics, zoom:Float = 1.0 ):Void {
-		if ( il == null )
-			return;
-		
-		if ( cs_yb != null ) {
-			graphics.lineStyle ( 0, 0, 0 );
-			graphics.beginFill ( 0x0, 0.2 );
-			graphics.drawRect ( -10000, cs_yb, 20000, il.p.y - cs_yb );
-			graphics.endFill ();
-		}
-		
-		graphics.lineStyle ( 1 / zoom, 0xaa9977, 1 );
-		graphics.moveTo ( -10000, il.p.y );
-		graphics.lineTo ( 10000, il.p.y );
-	}
-	
-	public function drawIntersections ( graphics:Graphics, zoom:Float = 1.0 ):Void {
-		if ( zoom > 50 )
-			zoom = 50;
-		
-		var isec:Intersection;
-		graphics.lineStyle ( 0, 0, 0 );
-		
-		if ( il != null ) {
-			isec = il.next;
-			
-			while ( isec != null ) {
-				graphics.beginFill ( 0x0000ff, 0.7 );
-				graphics.drawCircle ( isec.p.x, isec.p.y, 2 / zoom );
-				graphics.endFill ();
-				
-				isec = isec.next;
-			}
-		}
-		
-		isec = il;
-		
-		if ( isec != null ) {
-			drawAelNodeBySide ( graphics, isec.e1Node, zoom );
-			drawAelNodeBySide ( graphics, isec.e2Node, zoom );
-			
-			graphics.lineStyle ( 0, 0, 0 );
-			graphics.beginFill ( 0x5599ff, 1 );
-			graphics.drawCircle ( isec.p.x, isec.p.y, 2 / zoom );
-			graphics.endFill ();
-		}
-	}
-	
-	public function traceNextIntersection ():Void {
-		var isec = il;
-		
-		if ( isec != null ) {
-			trace ( 'Next intersection: ' +
-				getActiveEdgeDescription ( isec.e1Node ) + ' x ' +
-				getActiveEdgeDescription ( isec.e2Node )
-			);
-		}
-	}
-	
-	private function getActiveEdgeDescription ( aelNode:ActiveEdge ):String {
-		return	( aelNode.contributing ? 'c' : '' ) +
-			( aelNode.side == Side.Left ? 'l' : 'r' ) +
-			( aelNode.kind == PolyKind.Clip ? 'c' : 's' );
-	}
-	
-	public function traceAel ():Void {
-		var msg = 'Active Edge List:';
-		
-		if ( ael != null ) {
-			var aelNode = ael;
-			
-			while ( aelNode != null ) {
-				msg += ' ' + getActiveEdgeDescription ( aelNode );
-				
-				aelNode = aelNode.next;
-			}
-		} else
-			msg += ' NONE';
-		
-		trace ( msg );
-	}
-	
-	public function traceIl ():Void {
-		var msg = 'Intersection List';
-		
-		if ( il != null ) {
-			var count = 0;
-			var isec = il;
-			
-			while ( isec != null ) {
-				isec = isec.next;
-				count++;
-			}
-			
-			msg += ' (' + count + '):\n';
-			
-			isec = il;
-			
-			while ( isec != null ) {
-				msg += '(' + getActiveEdgeDescription ( isec.e1Node ) + ' x ' +
-					getActiveEdgeDescription ( isec.e2Node ) + ' at k: ' +
-					isec.k + ')\n';
-				
-				isec = isec.next;
-			}
-		} else
-			msg += ': NONE';
-		
-		trace ( msg );
 	}
 }

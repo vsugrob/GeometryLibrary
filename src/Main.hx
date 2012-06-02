@@ -8,37 +8,17 @@ import flash.display.StageAlign;
 import flash.display.StageScaleMode;
 import flash.events.Event;
 import flash.events.KeyboardEvent;
-import flash.geom.Matrix;
 import flash.geom.Point;
 import flash.Lib;
-import geom.ChainedPolygon;
-import geom.clipper.ActiveEdge;
-import geom.clipper.ClipperState;
-import geom.clipper.Edge;
-import geom.clipper.LocalMaxima;
-import geom.clipper.LocalMinima;
+import geom.clipper.ClipOperation;
 import geom.clipper.PolyFill;
 import geom.clipper.PolyKind;
-import geom.clipper.Side;
 import geom.clipper.VattiClipper;
-import geom.ClosedPolygonIterator;
-import geom.DoublyList;
-import geom.TakeIterator;
-import geom.ConcatIterator;
-import geom.clipper.ClipOperation;
 
 /**
  * ...
  * @author vsugrob
  */
-class C1 {
-	public function new () {}
-}
-class C2 extends C1 {
-	public function new () {
-		super ();
-	}
-}
 
 class Main {
 	static var clipper:VattiClipper;
@@ -52,9 +32,10 @@ class Main {
 	static var forceOneClip:Bool;
 	static var randomOuputStrokes:Bool;
 	
-	static function testRandomPolyClipping ( numTestsPerFrame:UInt = 20 ):Void {
+	static function testRandomPolyClipping ( numTestsPerFrame:UInt = 20, numPoints:UInt = 100 ):Void {
 		var stage = Lib.current.stage;
 		var prevTime:Float = Date.now ().getTime ();
+		var startTime:Float = prevTime;
 		var numClipsMade:UInt = 0;
 		var totalClipsMade:UInt = 0;
 		stage.frameRate = 100;
@@ -63,8 +44,8 @@ class Main {
 			for ( i in 0...numTestsPerFrame ) {
 				inputPolys = new List <InputPolygon> ();
 				
-				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( 10, 0, 600 ), PolyKind.Subject ) );
-				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( 10, 0, 600 ), PolyKind.Clip ) );
+				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( numPoints, 0, 600 ), PolyKind.Subject ) );
+				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( numPoints, 0, 600 ), PolyKind.Clip ) );
 				
 				clipper = new VattiClipper ();
 				
@@ -87,7 +68,10 @@ class Main {
 				
 				if ( timeDelta >= 1000 ) {
 					prevTime = nowTime;
-					trace ( "Clips made: " + numClipsMade + ", total: " + totalClipsMade );
+					var timeElapsed = nowTime - startTime;
+					var avgClipsPerSecond = totalClipsMade / ( timeElapsed / 1000 );
+					
+					trace ( "Clips made: " + numClipsMade + ", total: " + totalClipsMade + ", avgClipsPerSecond: " + avgClipsPerSecond );
 					numClipsMade = 0;
 				}
 			}
@@ -97,9 +81,9 @@ class Main {
 	static function main () {
 		forceOneClip = true;
 		
-		//clipOp = ClipOperation.Intersection;
+		clipOp = ClipOperation.Intersection;
 		//clipOp = ClipOperation.Difference;
-		clipOp = ClipOperation.Union;
+		//clipOp = ClipOperation.Union;
 		//clipOp = ClipOperation.Xor;
 		
 		subjectFill = PolyFill.EvenOdd;
@@ -121,8 +105,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		testRandomPolyClipping ();
-		return;
+		/*testRandomPolyClipping ( 100, 10 );
+		return;*/
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -755,7 +739,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: cross in circle nonzero test
+		// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -790,41 +774,10 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );*/
-		
-		/*// Test: local maxima insideness test
-		var subj1 = [
-			new Point ( 300, 0 ),
-			new Point ( 600, 300 ),
-			new Point ( 300, 600 ),
-			new Point ( 0, 300 ),
-		];
-		
-		var subj2 = [
-			new Point ( 300, 100 ),
-			new Point ( 500, 300 ),
-			new Point ( 300, 500 ),
-			new Point ( 100, 300 ),
-		];
-		
-		subj2.reverse ();
-		
-		addInputPolygon ( subj1, PolyKind.Subject );
-		addInputPolygon ( subj2, PolyKind.Subject );
-		subjectFill = PolyFill.NonZero;
-		
-		var clip = [
-			new Point ( 300, 200 ),
-			new Point ( 400, 300 ),
-			new Point ( 300, 400 ),
-			new Point ( 200, 300 ),
-		];
-		
 		addInputPolygon ( clip, PolyKind.Clip );
-		clipOp = ClipOperation.Union;*/
 		
 		
-		var angle = 0.0;
+		/*var angle = 0.0;
 		var dAngle = 10;
 		
 		while ( angle <= 45 ) {
@@ -876,7 +829,7 @@ class Main {
 			//}
 			
 			angle += dAngle;
-		}
+		}*/
 		
 		morpher = new DebugPolyMorpher ( inputPolys, 20 );
 		//morpher.stopped = true;
@@ -920,35 +873,12 @@ class Main {
 		
 		//drawCurrentStep ( panAndZoom.zoom );
 		
-		var stepNum = 0;
-		
-		// Setup stage for clipStep
 		stage.addEventListener ( KeyboardEvent.KEY_DOWN, function ( kb:KeyboardEvent ) {
-			if ( kb.keyCode == 32 ) {	// Space
-				if ( clipper.clipStep () )
-					stepNum++;
-				
-				drawCurrentStep ( panAndZoom.zoom );
-				
-				if ( clipper.clipperState == ClipperState.Finished )
-					clipper.drawOutPolys ( debugSprite.graphics );
-				
-				trace ( "clipStep () #" + stepNum + ", next action: " + clipper.clipperState );
-				
-				clipper.traceNextIntersection ();
-			} else if ( kb.keyCode == 49 )	// 1
-				clipper.drawAelBySide ( debugSprite.graphics );
-			else if ( kb.keyCode == 50 )	// 2
-				clipper.drawAelByPoly ( debugSprite.graphics );
-			else if ( kb.keyCode == 83 ) {	// s
+			if ( kb.keyCode == 83 ) {	// s
 				var buf = new StringBuf ();
 				drawInputPolysSvg ( buf );
 				Clipboard.generalClipboard.setData ( ClipboardFormats.TEXT_FORMAT, buf.toString () );
-			} else if ( kb.keyCode == 65 )	// a
-				clipper.traceAel ();
-			else if ( kb.keyCode == 73 )	// i
-				clipper.traceIl ();
-			else if ( kb.keyCode == 77 )	// m
+			} else if ( kb.keyCode == 77 )	// m
 				morpher.stopped = !morpher.stopped;
 			else if ( kb.keyCode == 90 )	// z
 				trace ( "zoom: " + panAndZoom.zoom );
@@ -1041,9 +971,6 @@ class Main {
 		if ( !hideInputPolys )
 			drawInputPolys ( debugSprite.graphics, zoom );
 		
-		clipper.drawCurrentScanbeam ( debugSprite.graphics, zoom );
-		clipper.drawIntersectionScanline ( debugSprite.graphics, zoom );
-		
 		var strokeColor:Null <UInt> = 0;
 		var strokeOpacity:Float = 0.5;
 		
@@ -1053,8 +980,6 @@ class Main {
 		}
 		
 		clipper.drawContributedPolys ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, 0xaa7700, 0.5 );
-		clipper.drawAelBySide ( debugSprite.graphics, zoom );
-		clipper.drawIntersections ( debugSprite.graphics, zoom );
 	}
 	
 	private static function drawInputPolys ( graphics:Graphics, zoom:Float = 1.0 ):Void {

@@ -1,6 +1,5 @@
 package geom.clipper;
 import geom.ChainedPolygon;
-import geom.DoublyList;
 
 /**
  * ...
