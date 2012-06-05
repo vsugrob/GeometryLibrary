@@ -5,6 +5,7 @@ import flash.display.GraphicsPathWinding;
 import flash.geom.Point;
 import flash.Vector;
 import geom.ChainedPolygon;
+import geom.clipper.output.ClipOutput;
 import geom.ConcatIterator;
 import geom.DoublyList;
 import geom.TakeIterator;
@@ -46,9 +47,9 @@ class VattiClipper {
 	 */
 	private var hel:DoublyList <ActiveEdge>;
 	/**
-	 * List of polygons being formed during clipping operation.
+	 * List of outputs formed during clipping operation.
 	 */
-	private var outPolys:List <ClipResultPolygon>;
+	private var outputs:List <ClipOutput>;
 	/**
 	 * Number of currently contributing polygons. Necessary for output polygon
 	 * index determination.
@@ -78,9 +79,11 @@ class VattiClipper {
 	 * Whether one of the fills ( subjectFill or clipFill ) uses winding rule.
 	 */
 	private var thereIsWindingFill:Bool;
+	public var outputSettings:ClipOutputSettings;
 	
-	public inline function new () {
-		this.outPolys = new List <ClipResultPolygon> ();
+	public inline function new ( outputSettings:ClipOutputSettings = null ) {
+		this.outputs = new List <ClipOutput> ();
+		this.outputSettings = outputSettings == null ? new ClipOutputSettings () : outputSettings;
 	}
 	
 	/**
@@ -114,13 +117,23 @@ class VattiClipper {
 		sbl = null;
 		ael = null;
 		hel = null;
-		outPolys = new List <ClipResultPolygon> ();
+		outputs = new List <ClipOutput> ();
 		numContribugingPolys = 0;
 		il = null;
 		ilLast = null;
 	}
 	
-	public function clip ( operation:ClipOperation, subjectFill:PolyFill = null, clipFill:PolyFill = null ):Void {
+	public function clip ( operation:ClipOperation,
+		subjectFill:PolyFill = null, clipFill:PolyFill = null,
+		outputSettings:ClipOutputSettings = null ):Void
+	{
+		if ( outputSettings != null )
+			this.outputSettings = outputSettings;
+		
+		if ( this.outputSettings.noOutput ) {
+			// TODO: no need to process anything
+		}
+		
 		if ( sbl == null )	// Scanbeam list is empty
 			return;
 		
@@ -541,7 +554,7 @@ class VattiClipper {
 					else
 						numUnlikeEdges++;
 					
-					if ( aelNode.poly != null )
+					if ( aelNode.output != null )
 						closestContribNode = aelNode;
 					
 					prevAelNode = aelNode;
@@ -556,7 +569,7 @@ class VattiClipper {
 					else
 						otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
 					
-					if ( aelNode.poly != null )
+					if ( aelNode.output != null )
 						closestContribNode = aelNode;
 					
 					prevAelNode = aelNode;
@@ -575,7 +588,7 @@ class VattiClipper {
 					else
 						numUnlikeEdges++;
 					
-					if ( aelNode.poly != null )
+					if ( aelNode.output != null )
 						closestContribNode = aelNode;
 					
 					prevAelNode = aelNode;
@@ -590,7 +603,7 @@ class VattiClipper {
 					else
 						otherWindingSum = cast ( aelNode, ActiveWindingEdge ).windingSum;
 					
-					if ( aelNode.poly != null )
+					if ( aelNode.output != null )
 						closestContribNode = aelNode;
 					
 					prevAelNode = aelNode;
@@ -730,24 +743,11 @@ class VattiClipper {
 	}
 	
 	private inline function processLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, closestContribNode:ActiveEdge, p:Point ):Void {
-		var parent:ClipResultPolygon;
-		var isHole:Bool;
+		var output = new ClipOutput ( outputSettings, numContribugingPolys++ );
+		output.addLocalMax ( e1Node, e2Node, closestContribNode, p );
 		
-		if ( closestContribNode == null ) {
-			parent = null;
-			isHole = false;
-		} else if ( closestContribNode.side == Side.Right ) {
-			parent = closestContribNode.poly.parent;
-			isHole = false;
-		} else {
-			parent = closestContribNode.poly;
-			isHole = true;
-		}
-		
-		var poly = new ClipResultPolygon ( p, parent, isHole, numContribugingPolys++ );
-		
-		e1Node.poly = poly;
-		e2Node.poly = poly;
+		e1Node.output = output;
+		e2Node.output = output;
 	}
 	
 	/**
@@ -944,37 +944,32 @@ class VattiClipper {
 		}
 	}
 	
+	// TODO: funcs addPointTo(Left/Right)Bound are redudant. Refactor.
 	private inline function addPointToLeftBound ( aelNode:ActiveEdge, p:Point ):Void {
-		aelNode.poly.addFirst ( p );
+		aelNode.output.addPointToLeftBound ( p, aelNode );
 	}
 	
 	private inline function addPointToRightBound ( aelNode:ActiveEdge, p:Point ):Void {
-		aelNode.poly.addLast ( p );
+		aelNode.output.addPointToRightBound ( p, aelNode );
 	}
 	
 	private inline function processLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void {
-		if ( aelNode1.side == Side.Left )
-			addPointToLeftBound ( aelNode1, p );
-		else
-			addPointToRightBound ( aelNode1, p );
+		aelNode1.output.addLocalMin ( aelNode1, aelNode2, p );
 		
-		if ( aelNode1.poly != aelNode2.poly )	// aelNode1 and aelNode2 have different output polygons
-			appendPolygon ( aelNode1, aelNode2 );
+		if ( aelNode1.output != aelNode2.output )	// aelNode1 and aelNode2 have different output instances. Merge them.
+			mergeOutput ( aelNode1, aelNode2 );
 		else
-			outPolys.add ( aelNode1.poly );
+			outputs.add ( aelNode1.output );
 	}
 	
-	private function appendPolygon ( e1:ActiveEdge, f1:ActiveEdge ):Void {
-		if ( e1.side == Side.Left )
-			e1.poly.prepend ( f1.poly );
-		else /*if ( e1.side == Side.Right )*/
-			e1.poly.append ( f1.poly );
+	private function mergeOutput ( e1:ActiveEdge, f1:ActiveEdge ):Void {
+		e1.output.merge ( f1.output, e1.side == Side.Right );
 		
 		var f2 = ael;
 		
 		do {
-			if ( f2.poly == f1.poly && f2 != f1 ) {
-				f2.poly = e1.poly;	// Make P1 the adjacent polygon of f2
+			if ( f2.output == f1.output && f2 != f1 ) {
+				f2.output = e1.output;	// e1.output absorbed output of f2
 				
 				break;
 			}
@@ -1330,8 +1325,8 @@ class VattiClipper {
 							processLocalMin ( e1Node, e2Node, isec.p );
 							e1Node.contributing = false;
 							e2Node.contributing = false;
-							e1Node.poly = null;
-							e2Node.poly = null;
+							e1Node.output = null;
+							e2Node.output = null;
 						}
 						
 						e1WinNode.isGhost = true;
@@ -1355,7 +1350,7 @@ class VattiClipper {
 							if ( aelNode.kind == otherKind )
 								numUnlikeEdges++;
 							
-							if ( aelNode.poly != null )
+							if ( aelNode.output != null )
 								closestContribNode = aelNode;
 							
 							aelNode = aelNode.prev;
@@ -1364,7 +1359,7 @@ class VattiClipper {
 						insideOther = numUnlikeEdges % 2 == 1;
 					} else /*if ( otherFill == PolyFill.NonZero )*/ {
 						while ( aelNode != null ) {
-							if ( closestContribNode == null && aelNode.poly != null )
+							if ( closestContribNode == null && aelNode.output != null )
 								closestContribNode = aelNode;
 							
 							if ( aelNode.kind == otherKind ) {
@@ -1381,7 +1376,7 @@ class VattiClipper {
 						
 						if ( closestContribNode == null ) {
 							while ( aelNode != null ) {
-								if ( aelNode.poly != null ) {
+								if ( aelNode.output != null ) {
 									closestContribNode = aelNode;
 									
 									break;
@@ -1471,8 +1466,8 @@ class VattiClipper {
 						processLocalMin ( e1Node, e2Node, isec.p );
 						e1Node.contributing = false;
 						e2Node.contributing = false;
-						e1Node.poly = null;
-						e2Node.poly = null;
+						e1Node.output = null;
+						e2Node.output = null;
 					case IntersectionType.LocalMaxima:
 						closestContribNode = seekClosestContributingPoly ( e1Node.prev );
 						processLocalMax ( e1Node, e2Node, closestContribNode, isec.p );
@@ -1496,11 +1491,12 @@ class VattiClipper {
 				areNotInteract = true;
 		}
 		
+		// TODO: not every outcome should result in swapping below. Optimize it.
 		if ( !areNotInteract ) {
 			// Exchange poly pointers in edges
-			var tmpPoly = e1Node.poly;
-			e1Node.poly = e2Node.poly;
-			e2Node.poly = tmpPoly;
+			var tmpPoly = e1Node.output;
+			e1Node.output = e2Node.output;
+			e2Node.output = tmpPoly;
 			
 			var tmpContrib = e1Node.contributing;
 			e1Node.contributing = e2Node.contributing;
@@ -1512,7 +1508,7 @@ class VattiClipper {
 		var closestContribNode:ActiveEdge = null;
 		
 		while ( aelNode != null ) {
-			if ( aelNode.poly != null ) {
+			if ( aelNode.output != null ) {
 				closestContribNode = aelNode;
 				
 				break;
@@ -1683,9 +1679,9 @@ class VattiClipper {
 	}
 	
 	public function drawOutPolys ( graphics:Graphics ):Void {
-		for ( poly in outPolys ) {
+		for ( poly in outputs ) {
 			beginDrawPoly ( graphics, null, 1, 2, null, 0.5 );
-			drawPoly ( poly, graphics );
+			drawPoly ( poly.polyOut, graphics );
 			endDrawPoly ( graphics );
 		}
 	}
@@ -1694,44 +1690,44 @@ class VattiClipper {
 		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
 		fill:Null <UInt> = null, fillOpacity = 0.5, emphasizeHoles:Bool = false ):Void
 	{
-		var polys = new List <ClipResultPolygon> ();
+		var allOutputs = new List <ClipOutput> ();
 		var aelNode = ael;
 		
 		while ( aelNode != null ) {
-			if ( aelNode.poly != null ) {
-				if ( !Lambda.has ( polys, aelNode.poly ) )
-					polys.add ( aelNode.poly );
+			if ( aelNode.output != null ) {
+				if ( !Lambda.has ( allOutputs, aelNode.output ) )
+					allOutputs.add ( aelNode.output );
 			}
 			
 			aelNode = aelNode.next;
 		}
 		
-		for ( poly in outPolys ) {
-			if ( !Lambda.has ( polys, poly ) )
-				polys.add ( poly );
+		for ( output in outputs ) {
+			if ( !Lambda.has ( allOutputs, output ) )
+				allOutputs.add ( output );
 		}
 		
 		// Draw fills
 		beginDrawPoly ( graphics, null, 0.0, 0.0,
 			fill, fillOpacity );
 		
-		for ( poly in polys ) {
-			drawPoly ( poly, graphics );
+		for ( output in allOutputs ) {
+			drawPoly ( output.polyOut, graphics );
 		}
 		
 		endDrawPoly ( graphics );
 		
 		// Draw strokes
-		for ( poly in polys ) {
+		for ( output in allOutputs ) {
 			var effectiveStrokeColor:Null <UInt>;
 			
-			if ( emphasizeHoles && poly.isHole )
+			if ( emphasizeHoles && output.polyOut.isHole )
 				effectiveStrokeColor = 0xff0000;
 			else
 				effectiveStrokeColor = stroke;
 			
 			beginDrawPoly ( graphics, effectiveStrokeColor, strokeOpacity, strokeWidth, 0, 0.0 );
-			drawPoly ( poly, graphics );
+			drawPoly ( output.polyOut, graphics );
 			endDrawPoly ( graphics );
 		}
 	}

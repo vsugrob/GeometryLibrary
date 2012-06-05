@@ -1,5 +1,6 @@
 package geom.clipper;
 import geom.ChainedPolygon;
+import geom.clipper.output.ClipOutput;
 
 /**
  * ...
@@ -37,9 +38,9 @@ class ActiveEdge {
 	 */
 	public var topXIntercept:Float;
 	/**
-	 * Pointer to partial polygon associated to the edge.
+	 * Pointer to partial output associated to the edge.
 	 */
-	public var poly:ClipResultPolygon;
+	public var output:ClipOutput;
 	/**
 	 * Precasted reference to this instance as ActiveWindingEdge. If this is
 	 * not an ActiveWindingEdge, this property will contain null.

@@ -11,6 +11,8 @@ import flash.events.KeyboardEvent;
 import flash.geom.Point;
 import flash.Lib;
 import geom.clipper.ClipOperation;
+import geom.clipper.ClipOutputSettings;
+import geom.clipper.output.ClipOutput;
 import geom.clipper.PolyFill;
 import geom.clipper.PolyKind;
 import geom.clipper.VattiClipper;
@@ -19,6 +21,16 @@ import geom.clipper.VattiClipper;
  * ...
  * @author vsugrob
  */
+
+interface Intf {
+	public function hehe ():Void;
+}
+
+class Cls implements Intf {
+	public function hehe ():Void {
+		
+	}
+}
 
 class Main {
 	static var clipper:VattiClipper;
@@ -32,6 +44,7 @@ class Main {
 	static var forceOneClip:Bool;
 	static var randomOuputStrokes:Bool;
 	static var emphasizeHoles:Bool;
+	static var outputSettings:ClipOutputSettings;
 	
 	static function testRandomPolyClipping ( numTestsPerFrame:UInt = 20, numPoints:UInt = 100 ):Void {
 		var stage = Lib.current.stage;
@@ -48,7 +61,7 @@ class Main {
 				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( numPoints, 0, 600 ), PolyKind.Subject ) );
 				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( numPoints, 0, 600 ), PolyKind.Clip ) );
 				
-				clipper = new VattiClipper ();
+				clipper = new VattiClipper ( outputSettings );
 				
 				for ( inputPoly in inputPolys )
 					clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
@@ -82,13 +95,15 @@ class Main {
 	static function main () {
 		forceOneClip = true;
 		
-		clipOp = ClipOperation.Intersection;
-		//clipOp = ClipOperation.Difference;
+		//clipOp = ClipOperation.Intersection;
+		clipOp = ClipOperation.Difference;
 		//clipOp = ClipOperation.Union;
 		//clipOp = ClipOperation.Xor;
 		
-		subjectFill = PolyFill.NonZero;
+		subjectFill = PolyFill.EvenOdd;
 		clipFill = PolyFill.EvenOdd;
+		
+		outputSettings = new ClipOutputSettings ( true );
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -106,8 +121,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*testRandomPolyClipping ( 100, 10 );
-		return;*/
+		testRandomPolyClipping ( 100, 10 );
+		return;
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -849,7 +864,7 @@ class Main {
 					return;
 			}
 			
-			clipper = new VattiClipper ();
+			clipper = new VattiClipper ( outputSettings );
 			
 			for ( inputPoly in inputPolys )
 				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
@@ -863,7 +878,7 @@ class Main {
 			drawCurrentStep ( panAndZoom.zoom );
 		} );
 		
-		/*clipper = new VattiClipper ();
+		/*clipper = new VattiClipper ( outputSettings );
 		
 		for ( inputPoly in inputPolys )
 			clipper.addPolygon ( inputPoly.pts, inputPoly.kind );

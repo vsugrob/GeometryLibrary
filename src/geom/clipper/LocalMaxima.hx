@@ -6,7 +6,13 @@ package geom.clipper;
  */
 
 class LocalMaxima {
+	/**
+	 * edge1 is the first edge of boundary non-decreasing by Y-axis.
+	 */
 	public var edge1:Edge;
+	/**
+	 * edge1 is the first edge of boundary non-increasing by Y-axis.
+	 */
 	public var edge2:Edge;
 	/**
 	 * Local maximas sorted descending by y-coordinate.
