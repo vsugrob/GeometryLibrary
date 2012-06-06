@@ -794,6 +794,11 @@ class VattiClipper {
 					
 					continue;
 				} else {
+					// Advance edge to its successor
+					aelNode.edge = edge.successor;
+					aelNode.bottomXIntercept = aelNode.edge.bottomX;
+					aelNode.bottomY = sbTop;
+					
 					if ( aelNode.contributing ) {
 						var p = new Point ( edge.successor.bottomX, sbTop );
 						
@@ -802,10 +807,6 @@ class VattiClipper {
 						else
 							addPointToRightBound ( aelNode, p );
 					}
-					
-					aelNode.edge = edge.successor;
-					aelNode.bottomXIntercept = aelNode.edge.bottomX;
-					aelNode.bottomY = sbTop;
 					
 					addScanbeam ( edge.successor.topY );
 					
@@ -904,6 +905,10 @@ class VattiClipper {
 			var removeHelNode = false;
 			
 			if ( !edge.successor.isLocalMinima () ) {
+				// Advance edge to its successor
+				aelNode.edge = edge.successor;
+				aelNode.bottomXIntercept = aelNode.edge.bottomX;
+				
 				if ( aelNode.contributing ) {
 					var p = new Point ( edge.successor.bottomX, edge.topY );
 					
@@ -912,9 +917,6 @@ class VattiClipper {
 					else
 						addPointToRightBound ( aelNode, p );
 				}
-				
-				aelNode.edge = edge.successor;
-				aelNode.bottomXIntercept = aelNode.edge.bottomX;
 				
 				if ( !edge.successor.isHorizontal ) {
 					addScanbeam ( edge.successor.topY );
@@ -1227,7 +1229,6 @@ class VattiClipper {
 		// e1Node precedes e2Node in AEL
 		var e1Node:ActiveEdge = isec.e1Node;
 		var e2Node:ActiveEdge = isec.e2Node;
-		var areNotInteract:Bool = false;	// If one or both edges are ghosts then they are not interact
 		var closestContribNode:ActiveEdge = null;
 		
 		if ( e1Node.kind == e2Node.kind ) {
@@ -1237,10 +1238,13 @@ class VattiClipper {
 				/* Like edge intersection:
 				 * (LC × RC) or (RC × LC) → LI and RI
 				 * (LS × RS) or (RS × LS) → LI and RI */
+				swapOutputs ( e1Node, e2Node );
+				swapSides ( e1Node, e2Node );
+				
 				if ( e1Node.contributing ) {			// Then e2Node is contributing also
 					isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 					
-					if ( e1Node.side == Side.Left ) {
+					if ( e1Node.side == Side.Left ) {	// e2Node's side is right
 						addPointToLeftBound ( e1Node, isec.p );
 						addPointToRightBound ( e2Node, isec.p );
 					} else {
@@ -1248,8 +1252,6 @@ class VattiClipper {
 						addPointToRightBound ( e1Node, isec.p );
 					}
 				}
-				
-				swapSides ( e1Node, e2Node );
 			} else /*if ( thisFill == PolyFill.NonZero )*/ {
 				/* Classify self-intersection.
 				 * Code below uses notation [Case #] to denote
@@ -1261,33 +1263,42 @@ class VattiClipper {
 				
 				if ( ws1 == 1 ) {
 					if ( ws2 == 2 && e1WinNode.winding == e2WinNode.winding ) {	// 1 × 2 → LI, [Case 1 and 2]
-						if ( e1Node.contributing ) {
+						swapOutputs ( e1Node, e2Node );
+						swapContribs ( e1Node, e2Node );
+						e2Node.side = e1Node.side;	// Inherit side
+						
+						if ( e2Node.contributing ) {
 							isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 							
-							if ( e1Node.side == Side.Left )
-								addPointToLeftBound ( e1Node, isec.p );
+							if ( e2Node.side == Side.Left )
+								addPointToLeftBound ( e2Node, isec.p );
 							else
-								addPointToRightBound ( e1Node, isec.p );
+								addPointToRightBound ( e2Node, isec.p );
 						}
 						
-						e2Node.side = e1Node.side;	// Inherit side
 						e1WinNode.isGhost = true;
 						e2WinNode.isGhost = false;
 					} else /*if ( ws2 == 0 )*/ {
 						if ( e1WinNode.winding == e2WinNode.winding ) {	// 1 × 0 (same winding) → RI, [Case 9 and 10]
-							if ( e2Node.contributing ) {
+							swapOutputs ( e1Node, e2Node );
+							swapContribs ( e1Node, e2Node );
+							e1Node.side = e2Node.side;	// Inherit side
+							
+							if ( e1Node.contributing ) {
 								isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 								
-								if ( e2Node.side == Side.Right )
-									addPointToRightBound ( e2Node, isec.p );
+								if ( e1Node.side == Side.Right )
+									addPointToRightBound ( e1Node, isec.p );
 								else
-									addPointToLeftBound ( e2Node, isec.p );
+									addPointToLeftBound ( e1Node, isec.p );
 							}
 							
-							e1Node.side = e2Node.side;	// Inherit side
 							e2WinNode.isGhost = true;
 							e1WinNode.isGhost = false;
 						} else {	// 1 × 0 (diff winding) → LI and RI, [Case 3 and 4]
+							swapOutputs ( e1Node, e2Node );
+							swapSides ( e1Node, e2Node );
+							
 							if ( e1Node.contributing ) {	// Then e2Node is also contributing
 								isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 								
@@ -1299,12 +1310,13 @@ class VattiClipper {
 									addPointToLeftBound ( e2Node, isec.p );
 								}
 							}
-							
-							swapSides ( e1Node, e2Node );
 						}
 					}
 				} else if ( ws1 == 0 /*&& ws2 == 1*/ ) {
 					if ( e1WinNode.winding == e2WinNode.winding ) {	// 0 × 1 (same winding) → RI and LI, [Case 5 and 6]
+						swapOutputs ( e1Node, e2Node );
+						swapSides ( e1Node, e2Node );
+						
 						if ( e1Node.contributing ) {	// Then e2Node is also contributing
 							isec.calculateIntersectionPoint ( sbBottom, sbHeight );
 							
@@ -1316,8 +1328,6 @@ class VattiClipper {
 								addPointToRightBound ( e2Node, isec.p );
 							}
 						}
-						
-						swapSides ( e1Node, e2Node );
 					} else {	// 0 × 1 (diff winding) → MN, [Case 7 and 8]
 						if ( e1Node.contributing ) {	// Then e2Node is also contributing
 							isec.calculateIntersectionPoint ( sbBottom, sbHeight );
@@ -1453,15 +1463,21 @@ class VattiClipper {
 					
 					switch ( isecType ) {
 					case IntersectionType.LeftIntermediate:
+						swapOutputs ( e1Node, e2Node );
+						swapContribs ( e1Node, e2Node );
+						
 						if ( clipOp == ClipOperation.Union )
-							addPointToLeftBound ( e1Node, isec.p );
-						else
 							addPointToLeftBound ( e2Node, isec.p );
-					case IntersectionType.RightIntermediate:
-						if ( clipOp == ClipOperation.Union )
-							addPointToRightBound ( e2Node, isec.p );
 						else
+							addPointToLeftBound ( e1Node, isec.p );
+					case IntersectionType.RightIntermediate:
+						swapOutputs ( e1Node, e2Node );
+						swapContribs ( e1Node, e2Node );
+						
+						if ( clipOp == ClipOperation.Union )
 							addPointToRightBound ( e1Node, isec.p );
+						else
+							addPointToRightBound ( e2Node, isec.p );
 					case IntersectionType.LocalMinima:
 						processLocalMin ( e1Node, e2Node, isec.p );
 						e1Node.contributing = false;
@@ -1475,6 +1491,10 @@ class VattiClipper {
 						e2Node.contributing = true;
 					}
 				} else {
+					swapOutputs ( e1Node, e2Node );
+					swapContribs ( e1Node, e2Node );
+					swapSides ( e1Node, e2Node );
+					
 					if ( e1Node.side == Side.Left )
 						addPointToLeftBound ( e1Node, isec.p );
 					else
@@ -1484,23 +1504,8 @@ class VattiClipper {
 						addPointToLeftBound ( e2Node, isec.p );
 					else
 						addPointToRightBound ( e2Node, isec.p );
-					
-					swapSides ( e1Node, e2Node );
 				}
-			} else
-				areNotInteract = true;
-		}
-		
-		// TODO: not every outcome should result in swapping below. Optimize it.
-		if ( !areNotInteract ) {
-			// Exchange poly pointers in edges
-			var tmpPoly = e1Node.output;
-			e1Node.output = e2Node.output;
-			e2Node.output = tmpPoly;
-			
-			var tmpContrib = e1Node.contributing;
-			e1Node.contributing = e2Node.contributing;
-			e2Node.contributing = tmpContrib;
+			}
 		}
 	}
 	
@@ -1524,6 +1529,18 @@ class VattiClipper {
 		var tmpSide = e1Node.side;
 		e1Node.side = e2Node.side;
 		e2Node.side = tmpSide;
+	}
+	
+	private static inline function swapOutputs ( e1Node:ActiveEdge, e2Node:ActiveEdge ):Void {
+		var tmpPoly = e1Node.output;
+		e1Node.output = e2Node.output;
+		e2Node.output = tmpPoly;
+	}
+	
+	private static inline function swapContribs ( e1Node:ActiveEdge, e2Node:ActiveEdge ):Void {
+		var tmpContrib = e1Node.contributing;
+		e1Node.contributing = e2Node.contributing;
+		e2Node.contributing = tmpContrib;
 	}
 	
 	private static inline function AbsInt ( value:Int ):Int {

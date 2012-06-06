@@ -95,13 +95,13 @@ class Main {
 	static function main () {
 		forceOneClip = true;
 		
-		//clipOp = ClipOperation.Intersection;
-		clipOp = ClipOperation.Difference;
+		clipOp = ClipOperation.Intersection;
+		//clipOp = ClipOperation.Difference;
 		//clipOp = ClipOperation.Union;
 		//clipOp = ClipOperation.Xor;
 		
-		subjectFill = PolyFill.EvenOdd;
-		clipFill = PolyFill.EvenOdd;
+		subjectFill = PolyFill.NonZero;
+		clipFill = PolyFill.NonZero;
 		
 		outputSettings = new ClipOutputSettings ( true );
 		
