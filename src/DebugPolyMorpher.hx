@@ -28,10 +28,18 @@ class DebugPolyMorpher {
 			return;
 		
 		var da:Float = dt * rotVel;
+		var cnt:Int = 0;
 		var it = inputPolys.iterator ();
 		it.next ();
 		
 		for ( poly in it ) {
+			rotatePoly ( poly.pts, da, center );
+			cnt++;
+		}
+		
+		if ( cnt == 0 ) {
+			it = inputPolys.iterator ();
+			var poly = it.next ();
 			rotatePoly ( poly.pts, da, center );
 		}
 	}

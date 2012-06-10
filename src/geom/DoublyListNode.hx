@@ -5,27 +5,27 @@ package geom;
  * @author vsugrob
  */
 
-class DoublyList <TElement> {
+class DoublyListNode <TElement> {
 	public var value:TElement;
-	public var prev:DoublyList <TElement>;
-	public var next:DoublyList <TElement>;
+	public var prev:DoublyListNode <TElement>;
+	public var next:DoublyListNode <TElement>;
 	
-	public function new ( value:TElement, prev:DoublyList <TElement> = null, next:DoublyList <TElement> = null ) {
+	public function new ( value:TElement, prev:DoublyListNode <TElement> = null, next:DoublyListNode <TElement> = null ) {
 		this.value = value;
 		this.prev = prev;
 		this.next = next;
 	}
 	
-	public static function fromIterable <TElement> ( it:Iterator <TElement>, close:Bool = true ):DoublyList <TElement> {
+	public static function fromIterable <TElement> ( it:Iterator <TElement>, close:Bool = true ):DoublyListNode <TElement> {
 		if ( !it.hasNext () )
 			return	null;
 		
-		var dl0 = new DoublyList <TElement> ( it.next () );
-		var dl1:DoublyList <TElement>;
+		var dl0 = new DoublyListNode <TElement> ( it.next () );
+		var dl1:DoublyListNode <TElement>;
 		var dlStart = dl0;
 		
 		for ( element in it ) {
-			dl1 = new DoublyList <TElement> ( element, dl0 );
+			dl1 = new DoublyListNode <TElement> ( element, dl0 );
 			dl0.next = dl1;
 			dl0 = dl1;
 		}
@@ -77,7 +77,7 @@ class DoublyList <TElement> {
 	}
 	
 	public inline function insertNext ( element:TElement ):Void {
-		var dl = new DoublyList <TElement> ( element, this, this.next );
+		var dl = new DoublyListNode <TElement> ( element, this, this.next );
 		
 		if ( this.next != null )
 			this.next.prev = dl;
@@ -86,7 +86,7 @@ class DoublyList <TElement> {
 	}
 	
 	public inline function insertPrev ( element:TElement ):Void {
-		var dl = new DoublyList <TElement> ( element, this.prev, this );
+		var dl = new DoublyListNode <TElement> ( element, this.prev, this );
 		
 		if ( this.prev != null )
 			this.prev.next = dl;
@@ -126,7 +126,7 @@ class DoublyList <TElement> {
 	 *	1) pair of intermediate chain nodes points to each other
 	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
 	 */
-	public inline function first ():DoublyList <TElement> {
+	public inline function first ():DoublyListNode <TElement> {
 		var cur = this;
 		
 		while ( cur.prev != null ) {
@@ -149,7 +149,7 @@ class DoublyList <TElement> {
 	 *	1) pair of intermediate chain nodes points to each other
 	 * 	2) iteration process starts with a node which points to some circular chain but not belongs to it.
 	 */
-	public inline function last ():DoublyList <TElement> {
+	public inline function last ():DoublyListNode <TElement> {
 		var cur = this;
 		
 		while ( cur.next != null ) {
@@ -169,7 +169,7 @@ class DoublyList <TElement> {
 	 * Generalized swap routine that swaps positions of two elements in a list.
 	 * Note that elements not necessarily belongs to the same list.
 	 */
-	public static inline function swap <TElement> ( a:DoublyList <TElement>, b:DoublyList <TElement> ):Void {
+	public static inline function swap <TElement> ( a:DoublyListNode <TElement>, b:DoublyListNode <TElement> ):Void {
 		// Assume that commented out conditions also evaluates to true i.e. list is not broken
 		if ( a.next == b /*&& b.prev == a*/ )
 			swapAdjacent ( a, b );
@@ -185,7 +185,7 @@ class DoublyList <TElement> {
 	 * @param	a	A node which next property points to node b.
 	 * @param	b	A node which prev property points to node a.
 	 */
-	public static inline function swapAdjacent <TElement> ( a:DoublyList <TElement>, b:DoublyList <TElement> ):Void {
+	public static inline function swapAdjacent <TElement> ( a:DoublyListNode <TElement>, b:DoublyListNode <TElement> ):Void {
 		if ( a.prev != null )
 			a.prev.next = b;
 		
@@ -203,7 +203,7 @@ class DoublyList <TElement> {
 	 * @param	a	First node.
 	 * @param	b	Second node.
 	 */
-	public static inline function swapNonAdjacent <TElement> ( a:DoublyList <TElement>, b:DoublyList <TElement> ):Void {
+	public static inline function swapNonAdjacent <TElement> ( a:DoublyListNode <TElement>, b:DoublyListNode <TElement> ):Void {
 		if ( a.prev != null )
 			a.prev.next = b;
 		
@@ -231,7 +231,7 @@ class DoublyList <TElement> {
 	 * @param	b	Second node.
 	 * @return	Boolean indicating adjacency.
 	 */
-	public static inline function areAdjacent <TElement> ( a:DoublyList <TElement>, b:DoublyList <TElement> ):Bool {
+	public static inline function areAdjacent <TElement> ( a:DoublyListNode <TElement>, b:DoublyListNode <TElement> ):Bool {
 		return	( a.next == b && b.prev == a ) || ( b.next == a && a.prev == b );
 	}
 	

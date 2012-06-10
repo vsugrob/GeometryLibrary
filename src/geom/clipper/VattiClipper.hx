@@ -6,8 +6,10 @@ import flash.geom.Point;
 import flash.Vector;
 import geom.ChainedPolygon;
 import geom.clipper.output.ClipOutput;
+import geom.clipper.output.ClipOutputTriangles;
+import geom.clipper.output.PrimitiveType;
 import geom.ConcatIterator;
-import geom.DoublyList;
+import geom.DoublyListNode;
 import geom.TakeIterator;
 
 /**
@@ -45,7 +47,7 @@ class VattiClipper {
 	 * Pointer to first node of the doubly-linked list of horizontal edges
 	 * lying at the bottom of current scanbeam.
 	 */
-	private var hel:DoublyList <ActiveEdge>;
+	private var hel:DoublyListNode <ActiveEdge>;
 	/**
 	 * List of outputs formed during clipping operation.
 	 */
@@ -737,7 +739,7 @@ class VattiClipper {
 	
 	private inline function addHorizontalEdge ( eNode:ActiveEdge ):Void {
 		if ( hel == null )
-			hel = new DoublyList <ActiveEdge> ( eNode );
+			hel = new DoublyListNode <ActiveEdge> ( eNode );
 		else
 			hel.insertNext ( eNode );
 	}
@@ -965,7 +967,7 @@ class VattiClipper {
 	}
 	
 	private function mergeOutput ( e1:ActiveEdge, f1:ActiveEdge ):Void {
-		e1.output.merge ( f1.output, e1.side == Side.Right );
+		e1.output.merge ( f1.output, e1, f1 );
 		
 		var f2 = ael;
 		
@@ -993,7 +995,7 @@ class VattiClipper {
 		ilLast = null;
 		
 		// Set Sorted Edge List to first node in Active Edge List
-		var selLeft = new DoublyList <ActiveEdge> ( ael );
+		var selLeft = new DoublyListNode <ActiveEdge> ( ael );
 		var selRight = selLeft;
 		
 		ael.topXIntercept = ael.topX ( sbTop );
@@ -1048,7 +1050,7 @@ class VattiClipper {
 		} while ( helNode != null );
 		
 		// Set Sorted Edge List to first node in Active Edge List
-		var selLeft = new DoublyList <ActiveEdge> ( ael );
+		var selLeft = new DoublyListNode <ActiveEdge> ( ael );
 		var selRight = selLeft;
 		
 		var e1Node = ael.next;
@@ -1095,7 +1097,7 @@ class VattiClipper {
 	 * @param	selRight	Last element of Sorted Edge List.
 	 * @param	skipHorizontalPair	Should we skip terminating edge when its pairing edge is horizontal?
 	 */
-	private function buildApexIntersections ( selLeft:DoublyList <ActiveEdge>, selRight:DoublyList <ActiveEdge>, skipHorizontalPair:Bool ):Void {
+	private function buildApexIntersections ( selLeft:DoublyListNode <ActiveEdge>, selRight:DoublyListNode <ActiveEdge>, skipHorizontalPair:Bool ):Void {
 		do {
 			if ( selLeft.value.edge.topY == sbTop && selLeft.value.edge.successor.isLocalMinima () ) {
 				var lMin = cast ( selLeft.value.edge.successor, LocalMinima );
@@ -1137,7 +1139,7 @@ class VattiClipper {
 					 * horizontal or not. */
 					var isec = new Intersection ( selRight.prev.value, selRight.value,
 						new Point ( lMin.bottomX, lMin.topY ), Math.POSITIVE_INFINITY );
-					DoublyList.swapAdjacent ( selRight.prev, selRight );
+					DoublyListNode.swapAdjacent ( selRight.prev, selRight );
 					
 					// Add isec to the END of the IL
 					addIntersectionLast ( isec );
@@ -1437,7 +1439,7 @@ class VattiClipper {
 					
 					if ( contribVertex ) {
 						isec.calculateIntersectionPoint ( sbBottom, sbHeight );
-						processLocalMax ( e1Node, e2Node, closestContribNode, isec.p );
+						processLocalMax ( e2Node, e1Node, closestContribNode, isec.p );	// e2Node will be to the left of e1Node in AEL
 						e1Node.contributing = true;
 						e2Node.contributing = true;
 					}
@@ -1486,7 +1488,7 @@ class VattiClipper {
 						e2Node.output = null;
 					case IntersectionType.LocalMaxima:
 						closestContribNode = seekClosestContributingPoly ( e1Node.prev );
-						processLocalMax ( e1Node, e2Node, closestContribNode, isec.p );
+						processLocalMax ( e2Node, e1Node, closestContribNode, isec.p );	// e2Node will be to the left of e1Node in AEL
 						e1Node.contributing = true;
 						e2Node.contributing = true;
 					}
@@ -1625,6 +1627,9 @@ class VattiClipper {
 	}
 	
 	public static function drawPoly ( pts:Iterable <Point>, graphics:Graphics, fill:PolyFill = null ):Void {
+		if ( pts == null )
+			return;
+		
 		var it = pts.iterator ();
 		
 		if ( !it.hasNext () )
@@ -1655,6 +1660,45 @@ class VattiClipper {
 		coords.push ( pFirst.y );
 		
 		graphics.drawPath ( cmds, coords, fill == PolyFill.EvenOdd ? GraphicsPathWinding.EVEN_ODD : GraphicsPathWinding.NON_ZERO );
+	}
+	
+	public static function drawTriangles ( triOut:ClipOutputTriangles, graphics:Graphics, strokeWidth:Float = 1 ):Void {
+		if ( triOut == null )
+			return;
+		
+		var primIt = triOut.primities.iterator ();
+		
+		if ( !primIt.hasNext () )
+			return;
+		
+		while ( primIt.hasNext () ) {
+			var primitive = primIt.next ();
+			var it = primitive.points.iterator ();
+			var p0:Point, p1:Point, p2:Point;
+			
+			p0 = it.next ();
+			p1 = it.next ();
+			
+			do {
+				p2 = it.next ();
+				
+				graphics.beginFill ( primitive.type == PrimitiveType.TriangleStrip ? 0x00ff00 : 0xff0000, 0.5 );
+				graphics.lineStyle ( strokeWidth, 0, 1 );
+				
+				graphics.moveTo ( p0.x, p0.y );
+				graphics.lineTo ( p1.x, p1.y );
+				graphics.lineTo ( p2.x, p2.y );
+				graphics.lineTo ( p0.x, p0.y );
+				
+				graphics.endFill ();
+				
+				if ( primitive.type == PrimitiveType.TriangleStrip ) {
+					p0 = p1;
+					p1 = p2;
+				} else if ( primitive.type == PrimitiveType.TriangleFan )
+					p1 = p2;
+			} while ( it.hasNext () );
+		}
 	}
 	
 	public static function beginDrawPolySvg ( buf:StringBuf,
@@ -1696,10 +1740,16 @@ class VattiClipper {
 	}
 	
 	public function drawOutPolys ( graphics:Graphics ):Void {
-		for ( poly in outputs ) {
+		for ( output in outputs ) {
 			beginDrawPoly ( graphics, null, 1, 2, null, 0.5 );
-			drawPoly ( poly.polyOut, graphics );
+			drawPoly ( output.polyOut, graphics );
 			endDrawPoly ( graphics );
+		}
+	}
+	
+	public function drawOutTriangles ( graphics:Graphics, strokeWidth:Float = 1 ):Void {
+		for ( output in outputs ) {
+			drawTriangles ( output.triOut, graphics, strokeWidth );
 		}
 	}
 	

@@ -22,16 +22,6 @@ import geom.clipper.VattiClipper;
  * @author vsugrob
  */
 
-interface Intf {
-	public function hehe ():Void;
-}
-
-class Cls implements Intf {
-	public function hehe ():Void {
-		
-	}
-}
-
 class Main {
 	static var clipper:VattiClipper;
 	static var debugSprite:Sprite;
@@ -44,6 +34,7 @@ class Main {
 	static var forceOneClip:Bool;
 	static var randomOuputStrokes:Bool;
 	static var emphasizeHoles:Bool;
+	static var drawTriangles:Bool;
 	static var outputSettings:ClipOutputSettings;
 	
 	static function testRandomPolyClipping ( numTestsPerFrame:UInt = 20, numPoints:UInt = 100 ):Void {
@@ -100,10 +91,10 @@ class Main {
 		//clipOp = ClipOperation.Union;
 		//clipOp = ClipOperation.Xor;
 		
-		subjectFill = PolyFill.NonZero;
-		clipFill = PolyFill.NonZero;
+		subjectFill = PolyFill.EvenOdd;
+		clipFill = PolyFill.EvenOdd;
 		
-		outputSettings = new ClipOutputSettings ( true );
+		outputSettings = new ClipOutputSettings ( true, false );
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -792,6 +783,75 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );
 		
+		/*// Test: simple triangulation test
+		var subj1 = [
+			new Point ( 300, 500 ),
+		];
+		
+		//subj1.unshift ( new Point ( 200, 400 ) );
+		//subj1.unshift ( new Point ( 175, 350 ) );
+		//subj1.unshift ( new Point ( 175, 300 ) );
+		//subj1.unshift ( new Point ( 210, 275 ) );
+		//subj1.push ( new Point ( 250, 275 ) );
+		//subj1.push ( new Point ( 400, 0 ) );
+		
+		subj1.push ( new Point ( 500, 200 ) );
+		subj1.push ( new Point ( 700, 400 ) );
+		subj1.push ( new Point ( 500, 300 ) );
+		
+		addInputPolygon ( subj1, PolyKind.Subject );
+		clipOp = ClipOperation.Union;*/
+		
+		/*// Test: poly with hole triangulation
+		var subj1 = [
+			new Point ( 300, 0 ),
+			new Point ( 600, 300 ),
+			new Point ( 300, 600 ),
+			new Point ( 0, 300 ),
+		];
+		
+		var subj2 = [
+			new Point ( 200, 200 ),
+			new Point ( 200, 400 ),
+			new Point ( 100, 300 ),
+		];
+		
+		var subj3 = [
+			new Point ( 350, 450 ),
+			new Point ( 450, 350 ),
+			new Point ( 300, 150 ),
+		];
+		
+		addInputPolygon ( subj1, PolyKind.Subject );
+		addInputPolygon ( subj2, PolyKind.Subject );
+		addInputPolygon ( subj3, PolyKind.Subject );
+		clipOp = ClipOperation.Union;*/
+		
+		/*// Test: poly with concave hole triangulation
+		var subj1 = [
+			new Point ( 300, 0 ),
+			new Point ( 600, 300 ),
+			new Point ( 300, 600 ),
+			new Point ( 0, 300 ),
+		];
+		
+		var subj2 = [
+			new Point ( 200, 400 ),
+			new Point ( 300, 300 ),
+			new Point ( 400, 450 ),
+			new Point ( 350, 200 ),
+		];
+		
+		var subj3 = [
+			new Point ( 300, 400 ),
+			new Point ( 350, 450 ),
+			new Point ( 250, 475 ),
+		];
+		
+		addInputPolygon ( subj1, PolyKind.Subject );
+		addInputPolygon ( subj2, PolyKind.Subject );
+		addInputPolygon ( subj3, PolyKind.Subject );
+		clipOp = ClipOperation.Union;*/
 		
 		/*var angle = 0.0;
 		var dAngle = 10;
@@ -943,6 +1003,9 @@ class Main {
 			} else if ( kb.keyCode == 69 ) {
 				emphasizeHoles = !emphasizeHoles;
 				forceOneClip = true;
+			} else if ( kb.keyCode == 84 ) {
+				drawTriangles = !drawTriangles;
+				forceOneClip = true;
 			}
 		} );
 	}
@@ -999,6 +1062,9 @@ class Main {
 		}
 		
 		clipper.drawContributedPolys ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, 0xaa7700, 0.5, emphasizeHoles );
+		
+		if ( drawTriangles )
+			clipper.drawOutTriangles ( debugSprite.graphics, 1 / zoom );
 	}
 	
 	private static function drawInputPolys ( graphics:Graphics, zoom:Float = 1.0 ):Void {

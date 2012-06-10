@@ -8,7 +8,7 @@ import geom.clipper.ClipOutputSettings;
  * @author vsugrob
  */
 
-class ClipOutput implements ClipOutputReceiver {
+class ClipOutput implements IClipOutputReceiver {
 	public var spawnIndex:Int;
 	public var settings:ClipOutputSettings;
 	public var polyOut:ClipOutputPolygon;
@@ -22,7 +22,7 @@ class ClipOutput implements ClipOutputReceiver {
 			this.polyOut = new ClipOutputPolygon ( spawnIndex );
 		
 		if ( settings.triangles )
-			this.triOut = new ClipOutputTriangles ( spawnIndex );
+			this.triOut = new ClipOutputTriangles ( spawnIndex, this );
 	}
 	
 	public inline function addPointToLeftBound ( p:Point, aelNode:ActiveEdge ):Void {
@@ -57,11 +57,11 @@ class ClipOutput implements ClipOutputReceiver {
 			triOut.addLocalMax ( aelNode1, aelNode2, closestContribNode, p );
 	}
 	
-	public inline function merge ( output:ClipOutput, append:Bool ):Void {
+	public inline function merge ( output:ClipOutput, aelNode1:ActiveEdge, aelNode2:ActiveEdge ):Void {
 		if ( settings.polygons )
-			polyOut.merge ( output.polyOut, append );
+			polyOut.merge ( output.polyOut, aelNode1, aelNode2 );
 		
 		if ( settings.triangles )
-			triOut.merge ( output.triOut, append );
+			triOut.merge ( output.triOut, aelNode1, aelNode2 );
 	}
 }

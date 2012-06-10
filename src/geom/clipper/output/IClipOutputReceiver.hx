@@ -7,7 +7,7 @@ import geom.clipper.ActiveEdge;
  * @author vsugrob
  */
 
-interface ClipOutputReceiver {
+interface IClipOutputReceiver {
 	public var spawnIndex:Int;
 	public function addPointToLeftBound ( p:Point, aelNode:ActiveEdge ):Void;
 	public function addPointToRightBound ( p:Point, aelNode:ActiveEdge ):Void;

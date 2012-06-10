@@ -7,12 +7,18 @@ import flash.geom.Point;
  */
 
 class ChainedPolygon {
-	public var first:DoublyList <Point>;
-	public var last:DoublyList <Point>;
+	public var first:DoublyListNode <Point>;
+	public var last:DoublyListNode <Point>;
 	
-	public function new ( first:DoublyList <Point>, last:DoublyList <Point> ) {
+	public function new ( first:DoublyListNode <Point>, last:DoublyListNode <Point> ) {
 		this.first = first;
 		this.last = last;
+	}
+	
+	public static inline function create ( p:Point ):ChainedPolygon {
+		var pNode = new DoublyListNode ( p );
+		
+		return	new ChainedPolygon ( pNode, pNode );
 	}
 	
 	public inline function appendPoint ( p:Point ):Void {

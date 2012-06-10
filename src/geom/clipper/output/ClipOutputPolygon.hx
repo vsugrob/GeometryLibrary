@@ -3,14 +3,14 @@ import flash.geom.Point;
 import geom.ChainedPolygon;
 import geom.clipper.ActiveEdge;
 import geom.clipper.Side;
-import geom.DoublyList;
+import geom.DoublyListNode;
 
 /**
  * ...
  * @author vsugrob
  */
 
-class ClipOutputPolygon implements ClipOutputReceiver {
+class ClipOutputPolygon implements IClipOutputReceiver {
 	public var spawnIndex:Int;
 	public var points:ChainedPolygon;
 	public var parent:ClipOutputPolygon;
@@ -47,12 +47,12 @@ class ClipOutputPolygon implements ClipOutputReceiver {
 			isHole = true;
 		}
 		
-		var pNode:DoublyList <Point> = new DoublyList <Point> ( p );
+		var pNode:DoublyListNode <Point> = new DoublyListNode <Point> ( p );
 		points = new ChainedPolygon ( pNode, pNode );
 	}
 	
-	public inline function merge ( poly:ClipOutputPolygon, append:Bool ):Void {
-		if ( append )
+	public inline function merge ( poly:ClipOutputPolygon, aelNode1:ActiveEdge, aelNode2:ActiveEdge ):Void {
+		if ( aelNode1.side == Side.Right )
 			points.append ( poly.points );
 		else
 			points.prepend ( poly.points );

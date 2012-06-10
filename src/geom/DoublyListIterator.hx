@@ -7,11 +7,11 @@ import flash.geom.Point;
  */
 
 class DoublyListIterator <TElement> {
-	private var startPoint:DoublyList <TElement>;
-	private var curPoint:DoublyList <TElement>;
+	private var startPoint:DoublyListNode <TElement>;
+	private var curPoint:DoublyListNode <TElement>;
 	private var reverse:Bool;
 	
-	public function new ( startPoint:DoublyList <TElement>, reverse:Bool = false ) {
+	public function new ( startPoint:DoublyListNode <TElement>, reverse:Bool = false ) {
 		this.startPoint = startPoint;
 		this.curPoint = startPoint;
 		this.reverse = reverse;

@@ -1,6 +1,6 @@
-package geom.clipper;
+﻿package geom.clipper;
 import flash.geom.Point;
-import geom.DoublyList;
+import geom.DoublyListNode;
 
 /**
  * ...
