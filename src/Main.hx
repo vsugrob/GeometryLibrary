@@ -111,9 +111,9 @@ class Main {
 		} );
 		
 		inputPolys = new List <InputPolygon> ();
-		
+		/*
 		testRandomPolyClipping ( 100, 10 );
-		return;
+		return;*/
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [

@@ -1362,8 +1362,21 @@ class VattiClipper {
 							if ( aelNode.kind == otherKind )
 								numUnlikeEdges++;
 							
-							if ( aelNode.output != null )
+							if ( aelNode.output != null ) {
 								closestContribNode = aelNode;
+								aelNode = aelNode.prev;
+								
+								/* We've found closestContribNode and no longer need this "if" branch
+								 * so proceed to the next, more "lightweight" loop.*/
+								break;
+							}
+							
+							aelNode = aelNode.prev;
+						}
+						
+						while ( aelNode != null ) {
+							if ( aelNode.kind == otherKind )
+								numUnlikeEdges++;
 							
 							aelNode = aelNode.prev;
 						}
