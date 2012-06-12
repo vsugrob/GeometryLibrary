@@ -14,10 +14,30 @@ class OutputBound {
 	public var prev:OutputBound;
 	public var next:OutputBound;
 	
-	public function new ( column:MonotoneColumn, prev:OutputBound, next:OutputBound ) {
-		this.column = column;
-		this.prev = prev;
-		this.next = next;
+	public function new () { }
+	
+	public static inline function newFromActiveEdge ( activeEdge:ActiveEdge ):OutputBound {
+		var bound = new OutputBound ();
+		bound.edge = BottomUpEdge.newFromActiveEdge ( activeEdge );
+		bound.prevDx = bound.edge.dx;
+		
+		return	bound;
+	}
+	
+	public static inline function newFromPoints ( p0:Point, p1:Point ):OutputBound {
+		var bound = new OutputBound ();
+		bound.edge = BottomUpEdge.newFromPoints ( p0, p1 );
+		bound.prevDx = bound.edge.dx;
+		
+		return	bound;
+	}
+	
+	public inline function clone ():OutputBound {
+		var bound = new OutputBound ();
+		bound.edge = BottomUpEdge.newFromBottomUpEdge ( this.edge );
+		bound.prevDx = this.prevDx;
+		
+		return	bound;
 	}
 	
 	public inline function addLeftPointOnActiveEdge ( p:Point, aelNode:ActiveEdge ):Void {
@@ -39,7 +59,19 @@ class OutputBound {
 	}
 	
 	public inline function addRightPointOnNewEdge ( p:Point, p0:Point, p1:Point ):Void {
-		edge.setFromActiveEdge ( p0, p1 );
+		edge.setFromPoints ( p0, p1 );
+		prev.column.addRight ( p );
+		prevDx = edge.dx;
+	}
+	
+	public inline function addLeftPointOnBottomUpEdge ( p:Point, edge:BottomUpEdge ):Void {
+		edge.setFromBottomUpEdge ( edge );
+		column.addLeft ( p );
+		prevDx = edge.dx;
+	}
+	
+	public inline function addRightPointOnBottomUpEdge ( p:Point, otherEdge:BottomUpEdge ):Void {
+		edge.setFromBottomUpEdge ( otherEdge );
 		prev.column.addRight ( p );
 		prevDx = edge.dx;
 	}

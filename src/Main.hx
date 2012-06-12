@@ -34,6 +34,8 @@ class Main {
 	static var forceOneClip:Bool;
 	static var randomOuputStrokes:Bool;
 	static var emphasizeHoles:Bool;
+	static var drawContributedPolys:Bool;
+	static var drawMonos:Bool;
 	static var drawTriangles:Bool;
 	static var outputSettings:ClipOutputSettings;
 	
@@ -85,6 +87,8 @@ class Main {
 	
 	static function main () {
 		forceOneClip = true;
+		//drawContributedPolys = true;
+		drawMonos = true;
 		
 		clipOp = ClipOperation.Intersection;
 		//clipOp = ClipOperation.Difference;
@@ -94,7 +98,7 @@ class Main {
 		subjectFill = PolyFill.EvenOdd;
 		clipFill = PolyFill.EvenOdd;
 		
-		outputSettings = new ClipOutputSettings ( true, false );
+		outputSettings = new ClipOutputSettings ( true, false, false, false, true );
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -111,8 +115,8 @@ class Main {
 		} );
 		
 		inputPolys = new List <InputPolygon> ();
-		/*
-		testRandomPolyClipping ( 100, 10 );
+		
+		/*testRandomPolyClipping ( 100, 10 );
 		return;*/
 		
 		/*// Test: poly with two contributing local maximas
@@ -309,7 +313,7 @@ class Main {
 		addInputPolygon ( bgPoly, PolyKind.Subject );
 		addInputPolygon ( tooth, PolyKind.Clip );*/
 		
-		/*// Test: q-shaped poly.
+		// Test: q-shaped poly.
 		var bgPoly = [
 			//new Point ( -10, -10 ),
 			//new Point ( 600, 0 ),
@@ -335,7 +339,7 @@ class Main {
 		];
 		
 		addInputPolygon ( bgPoly, PolyKind.Subject );
-		addInputPolygon ( tooth, PolyKind.Clip );*/
+		addInputPolygon ( tooth, PolyKind.Clip );
 		
 		/*// Test: many-rooted tooth
 		var bgPoly = [
@@ -746,7 +750,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: cross in circle nonzero test
+		/*// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -781,23 +785,23 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: simple triangulation test
 		var subj1 = [
 			new Point ( 300, 500 ),
 		];
 		
-		//subj1.unshift ( new Point ( 200, 400 ) );
-		//subj1.unshift ( new Point ( 175, 350 ) );
-		//subj1.unshift ( new Point ( 175, 300 ) );
-		//subj1.unshift ( new Point ( 210, 275 ) );
-		//subj1.push ( new Point ( 250, 275 ) );
-		//subj1.push ( new Point ( 400, 0 ) );
+		subj1.unshift ( new Point ( 200, 400 ) );
+		subj1.unshift ( new Point ( 175, 350 ) );
+		subj1.unshift ( new Point ( 175, 300 ) );
+		subj1.unshift ( new Point ( 210, 275 ) );
+		subj1.push ( new Point ( 250, 275 ) );
+		subj1.push ( new Point ( 400, 0 ) );
 		
-		subj1.push ( new Point ( 500, 200 ) );
-		subj1.push ( new Point ( 700, 400 ) );
-		subj1.push ( new Point ( 500, 300 ) );
+		//subj1.push ( new Point ( 500, 200 ) );
+		//subj1.push ( new Point ( 700, 400 ) );
+		//subj1.push ( new Point ( 500, 300 ) );
 		
 		addInputPolygon ( subj1, PolyKind.Subject );
 		clipOp = ClipOperation.Union;*/
@@ -1000,11 +1004,17 @@ class Main {
 				clipFill = clipFill == PolyFill.EvenOdd ? PolyFill.NonZero : PolyFill.EvenOdd;
 				forceOneClip = true;
 				trace ( "clipFill: " + clipFill );
-			} else if ( kb.keyCode == 69 ) {
+			} else if ( kb.keyCode == 69 ) {	// e
 				emphasizeHoles = !emphasizeHoles;
 				forceOneClip = true;
-			} else if ( kb.keyCode == 84 ) {
+			} else if ( kb.keyCode == 84 ) {	// t
 				drawTriangles = !drawTriangles;
+				forceOneClip = true;
+			} else if ( kb.keyCode == 68 ) {	// d
+				drawContributedPolys = !drawContributedPolys;
+				forceOneClip = true;
+			} else if ( kb.keyCode == 79 ) {	// o
+				drawMonos = !drawMonos;
 				forceOneClip = true;
 			}
 		} );
@@ -1061,7 +1071,22 @@ class Main {
 			strokeOpacity = 0.9;
 		}
 		
-		clipper.drawContributedPolys ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, 0xaa7700, 0.5, emphasizeHoles );
+		if ( drawContributedPolys )
+			clipper.drawContributedPolys ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, 0xaa7700, 0.5, emphasizeHoles );
+		
+		if ( drawMonos ) {
+			var fillColor:Null <UInt> = 0xaa7700;
+			var fillOpacity:Float = 0.5;
+			
+			if ( randomOuputStrokes ) {
+				fillColor = null;
+				fillOpacity = 0.9;
+				strokeColor = 0;
+				strokeOpacity = 0.5;
+			}
+			
+			clipper.drawOutMonos ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, fillColor, fillOpacity );
+		}
 		
 		if ( drawTriangles )
 			clipper.drawOutTriangles ( debugSprite.graphics, 1 / zoom );

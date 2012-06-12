@@ -48,6 +48,10 @@ class BottomUpEdge {
 			this.dx = -this.dx;
 	}
 	
+	public static inline function newFromBottomUpEdge ( edge:BottomUpEdge ):BottomUpEdge {
+		return	new BottomUpEdge ( edge.bottomX, edge.bottomY, edge.dx );
+	}
+	
 	public inline function setFromBottomUpEdge ( edge:BottomUpEdge ):Void {
 		this.bottomX = edge.bottomX;
 		this.bottomY = edge.bottomY;

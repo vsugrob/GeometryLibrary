@@ -7,6 +7,7 @@ import flash.Vector;
 import geom.ChainedPolygon;
 import geom.clipper.output.ClipOutput;
 import geom.clipper.output.ClipOutputTriangles;
+import geom.clipper.output.OutputSharedData;
 import geom.clipper.output.PrimitiveType;
 import geom.ConcatIterator;
 import geom.DoublyListNode;
@@ -82,6 +83,7 @@ class VattiClipper {
 	 */
 	private var thereIsWindingFill:Bool;
 	public var outputSettings:ClipOutputSettings;
+	private var outputSharedData:OutputSharedData;
 	
 	public inline function new ( outputSettings:ClipOutputSettings = null ) {
 		this.outputs = new List <ClipOutput> ();
@@ -143,6 +145,7 @@ class VattiClipper {
 		this.subjectFill = subjectFill == null ? PolyFill.EvenOdd : subjectFill;
 		this.clipFill = clipFill == null ? PolyFill.EvenOdd : clipFill;
 		this.thereIsWindingFill = this.subjectFill != PolyFill.EvenOdd || this.clipFill != PolyFill.EvenOdd;
+		this.outputSharedData = new OutputSharedData ();
 		
 		sbBottom = popScanbeam ();	// Bottom of the current scanbeam
 		
@@ -745,7 +748,7 @@ class VattiClipper {
 	}
 	
 	private inline function processLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, closestContribNode:ActiveEdge, p:Point ):Void {
-		var output = new ClipOutput ( outputSettings, numContribugingPolys++ );
+		var output = new ClipOutput ( outputSettings, numContribugingPolys++, outputSharedData );
 		output.addLocalMax ( e1Node, e2Node, closestContribNode, p );
 		
 		e1Node.output = output;
@@ -1763,6 +1766,26 @@ class VattiClipper {
 	public function drawOutTriangles ( graphics:Graphics, strokeWidth:Float = 1 ):Void {
 		for ( output in outputs ) {
 			drawTriangles ( output.triOut, graphics, strokeWidth );
+		}
+	}
+	
+	public function drawOutMonos ( graphics:Graphics,
+		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
+		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
+	{
+		for ( output in outputs ) {
+			var monoOut = output.monoOut;
+			
+			if ( monoOut != null ) {
+				for ( poly in monoOut.leftBound.column.polys ) {
+					beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth,
+						fill, fillOpacity );
+					
+					drawPoly ( poly, graphics );
+					
+					endDrawPoly ( graphics );
+				}
+			}
 		}
 	}
 	
