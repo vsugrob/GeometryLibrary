@@ -134,7 +134,7 @@ class Main {
 		addInputPolygon ( clip, PolyKind.Clip );
 		addInputPolygon ( subject, PolyKind.Subject );*/
 		
-		// Test: simple case of one self-intersection (hourglass)
+		/*// Test: simple case of one self-intersection (hourglass)
 		var subject = [
 			new Point ( 10, 10 ),
 			new Point ( 0, 300 ),
@@ -151,7 +151,7 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: two clip polygons
 		var subject = [
@@ -745,7 +745,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: cross in circle nonzero test
+		// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -780,7 +780,7 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
 		/*// Test: simple triangulation test
 		var subj1 = [
@@ -1011,6 +1011,9 @@ class Main {
 			} else if ( kb.keyCode == 79 ) {	// o
 				outputSettings.monotoneNoHolePolygons = !outputSettings.monotoneNoHolePolygons;
 				forceOneClip = true;
+			} else if ( kb.keyCode == 86 ) {	// v
+				outputSettings.monotoneNoHoleConvex = !outputSettings.monotoneNoHoleConvex;
+				forceOneClip = true;
 			}
 		} );
 	}
@@ -1069,9 +1072,12 @@ class Main {
 		if ( outputSettings.polygons )
 			clipper.drawContributedPolys ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, 0xaa7700, 0.5, emphasizeHoles );
 		
+		var fillColor:Null <UInt>;
+		var fillOpacity:Float;
+		
 		if ( outputSettings.monotoneNoHolePolygons ) {
-			var fillColor:Null <UInt> = 0xaa7700;
-			var fillOpacity:Float = 0.5;
+			fillColor = 0xaa7700;
+			fillOpacity = 0.5;
 			
 			if ( randomOuputStrokes ) {
 				fillColor = null;
@@ -1081,6 +1087,20 @@ class Main {
 			}
 			
 			clipper.drawOutMonos ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, fillColor, fillOpacity );
+		}
+		
+		if ( outputSettings.monotoneNoHoleConvex ) {
+			fillColor = 0xaa7700;
+			fillOpacity = 0.5;
+			
+			if ( randomOuputStrokes ) {
+				fillColor = null;
+				fillOpacity = 0.9;
+				strokeColor = 0;
+				strokeOpacity = 0.5;
+			}
+			
+			clipper.drawOutConvex ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, fillColor, fillOpacity );
 		}
 		
 		if ( outputSettings.monotoneNoHoleTriangles )

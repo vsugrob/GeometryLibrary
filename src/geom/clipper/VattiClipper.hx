@@ -1774,6 +1774,26 @@ class VattiClipper {
 		}
 	}
 	
+	public function drawOutConvex ( graphics:Graphics,
+		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
+		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void
+	{
+		for ( output in outputs ) {
+			var convexColumn = output.monoOut.leftBound.column.convexColumn;
+			
+			if ( convexColumn != null ) {
+				for ( poly in convexColumn.polys ) {
+					beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth,
+						fill, fillOpacity );
+					
+					drawPoly ( poly, graphics );
+					
+					endDrawPoly ( graphics );
+				}
+			}
+		}
+	}
+	
 	public function drawOutMonos ( graphics:Graphics,
 		stroke:Null <UInt> = null, strokeOpacity:Float = 1, strokeWidth:Float = 1,
 		fill:Null <UInt> = null, fillOpacity = 0.5 ):Void

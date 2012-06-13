@@ -24,6 +24,14 @@ class OutputBound {
 			return	edge.dx <= prevDx;
 	}
 	
+	public inline function isConvexLeft ():Bool {
+		return	edge.dx <= prevDx;
+	}
+	
+	public inline function isConvexRight ():Bool {
+		return	edge.dx >= prevDx;
+	}
+	
 	public static inline function newFromActiveEdge ( activeEdge:ActiveEdge ):OutputBound {
 		var bound = new OutputBound ();
 		bound.edge = BottomUpEdge.newFromActiveEdge ( activeEdge );

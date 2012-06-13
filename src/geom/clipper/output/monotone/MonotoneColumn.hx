@@ -13,6 +13,7 @@ class MonotoneColumn {
 	private var outputSettings:ClipOutputSettings;
 	public var monoPolyColumn:MonotonePolygonColumn;
 	public var trianglesColumn:MonotoneTrianglesColumn;
+	public var convexColumn:MonotoneConvexColumn;
 	public var leftBound:OutputBound;
 	public var rightBound (getRightBound, null):OutputBound;
 	private inline function getRightBound ():OutputBound {
@@ -28,6 +29,9 @@ class MonotoneColumn {
 		
 		if ( outputSettings.monotoneNoHoleTriangles )
 			this.trianglesColumn = new MonotoneTrianglesColumn ( p, this );
+		
+		if ( outputSettings.monotoneNoHoleConvex )
+			this.convexColumn = new MonotoneConvexColumn ( p, this );
 	}
 	
 	public inline function addLeft ( p:Point ):Void {
@@ -36,6 +40,9 @@ class MonotoneColumn {
 		
 		if ( outputSettings.monotoneNoHoleTriangles )
 			trianglesColumn.addLeft ( p );
+		
+		if ( outputSettings.monotoneNoHoleConvex )
+			convexColumn.addLeft ( p );
 	}
 	
 	public inline function addRight ( p:Point ):Void {
@@ -44,6 +51,9 @@ class MonotoneColumn {
 		
 		if ( outputSettings.monotoneNoHoleTriangles )
 			trianglesColumn.addRight ( p );
+		
+		if ( outputSettings.monotoneNoHoleConvex )
+			convexColumn.addRight ( p );
 	}
 	
 	public inline function merge ( other:MonotoneColumn ):Void {
@@ -52,10 +62,13 @@ class MonotoneColumn {
 		
 		if ( outputSettings.monotoneNoHoleTriangles )
 			trianglesColumn.merge ( other.trianglesColumn );
+		
+		if ( outputSettings.monotoneNoHoleConvex )
+			convexColumn.merge ( other.convexColumn );
 	}
 	
 	public inline function flush ():Void {
-		// flush for monoPolyColumn is not required
+		// flush for monoPolyColumn and convexColumn is not required
 		
 		if ( outputSettings.monotoneNoHoleTriangles )
 			trianglesColumn.flush ();
