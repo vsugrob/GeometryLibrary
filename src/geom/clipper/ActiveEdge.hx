@@ -55,7 +55,10 @@ class ActiveEdge {
 	}
 	
 	public inline function topX ( y:Float ):Float {
-		return	edge.bottomX + edge.dx * ( y - bottomY );
+		if ( y == edge.topY )
+			return	edge.successor.bottomX;
+		else
+			return	edge.bottomX + edge.dx * ( y - bottomY );
 	}
 	
 	public inline function insertNext ( edge:Edge, kind:PolyKind ):Void {

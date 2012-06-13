@@ -146,7 +146,9 @@ class VattiClipper {
 		this.subjectFill = subjectFill == null ? PolyFill.EvenOdd : subjectFill;
 		this.clipFill = clipFill == null ? PolyFill.EvenOdd : clipFill;
 		this.thereIsWindingFill = this.subjectFill != PolyFill.EvenOdd || this.clipFill != PolyFill.EvenOdd;
-		this.outputSharedData = new OutputSharedData ();
+		this.outputSharedData = new OutputSharedData (
+			this.outputSettings.monotoneNoHoleOutputInvolved	// Evaluate this property once and store result
+		);
 		
 		sbBottom = popScanbeam ();	// Bottom of the current scanbeam
 		

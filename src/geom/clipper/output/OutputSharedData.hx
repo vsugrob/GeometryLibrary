@@ -11,6 +11,9 @@ class OutputSharedData {
 	 * First bound in bound list.
 	 */
 	public var boundList:OutputBound;
+	public var monotoneNoHoleOutputInvolved:Bool;
 	
-	public function new () {}
+	public function new ( monotoneNoHoleOutputInvolved:Bool ) {
+		this.monotoneNoHoleOutputInvolved = monotoneNoHoleOutputInvolved;
+	}
 }

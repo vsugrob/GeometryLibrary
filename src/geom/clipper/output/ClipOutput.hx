@@ -12,7 +12,6 @@ import geom.clipper.output.monotone.ClipOutputMonotone;
 class ClipOutput implements IClipOutputReceiver {
 	public var spawnIndex:Int;
 	public var settings:ClipOutputSettings;
-	private var monotoneNoHoleOutputInvolved:Bool;
 	public var polyOut:ClipOutputPolygon;
 	public var monoOut:ClipOutputMonotone;
 	public var sharedData:OutputSharedData;
@@ -20,13 +19,12 @@ class ClipOutput implements IClipOutputReceiver {
 	public inline function new ( settings:ClipOutputSettings, spawnIndex:Int, sharedData:OutputSharedData ) {
 		this.spawnIndex = spawnIndex;
 		this.settings = settings;
-		this.monotoneNoHoleOutputInvolved = settings.monotoneNoHoleOutputInvolved;	// Evaluate this property once and store result
 		this.sharedData = sharedData;
 		
 		if ( settings.polygons )
 			this.polyOut = new ClipOutputPolygon ( spawnIndex );
 		
-		if ( this.monotoneNoHoleOutputInvolved )
+		if ( sharedData.monotoneNoHoleOutputInvolved )
 			this.monoOut = new ClipOutputMonotone ( spawnIndex, sharedData, settings );
 	}
 	
@@ -34,7 +32,7 @@ class ClipOutput implements IClipOutputReceiver {
 		if ( settings.polygons )
 			polyOut.addPointToLeftBound ( p, aelNode );
 		
-		if ( this.monotoneNoHoleOutputInvolved )
+		if ( sharedData.monotoneNoHoleOutputInvolved )
 			monoOut.addPointToLeftBound ( p, aelNode );
 	}
 	
@@ -42,7 +40,7 @@ class ClipOutput implements IClipOutputReceiver {
 		if ( settings.polygons )
 			polyOut.addPointToRightBound ( p, aelNode );
 		
-		if ( this.monotoneNoHoleOutputInvolved )
+		if ( sharedData.monotoneNoHoleOutputInvolved )
 			monoOut.addPointToRightBound ( p, aelNode );
 	}
 	
@@ -50,7 +48,7 @@ class ClipOutput implements IClipOutputReceiver {
 		if ( settings.polygons )
 			polyOut.addLocalMin ( aelNode1, aelNode2, p );
 		
-		if ( this.monotoneNoHoleOutputInvolved )
+		if ( sharedData.monotoneNoHoleOutputInvolved )
 			monoOut.addLocalMin ( aelNode1, aelNode2, p );
 	}
 	
@@ -58,7 +56,7 @@ class ClipOutput implements IClipOutputReceiver {
 		if ( settings.polygons )
 			polyOut.addLocalMax ( aelNode1, aelNode2, closestContribNode, p );
 		
-		if ( this.monotoneNoHoleOutputInvolved )
+		if ( sharedData.monotoneNoHoleOutputInvolved )
 			monoOut.addLocalMax ( aelNode1, aelNode2, closestContribNode, p );
 	}
 	
@@ -66,7 +64,7 @@ class ClipOutput implements IClipOutputReceiver {
 		if ( settings.polygons )
 			polyOut.merge ( output.polyOut, aelNode1, aelNode2 );
 		
-		if ( this.monotoneNoHoleOutputInvolved )
+		if ( sharedData.monotoneNoHoleOutputInvolved )
 			monoOut.merge ( output.monoOut, aelNode1, aelNode2 );
 	}
 	
@@ -74,7 +72,7 @@ class ClipOutput implements IClipOutputReceiver {
 		if ( settings.polygons )
 			polyOut.flush ();
 		
-		if ( this.monotoneNoHoleOutputInvolved )
+		if ( sharedData.monotoneNoHoleOutputInvolved )
 			monoOut.flush ();
 	}
 }

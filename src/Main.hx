@@ -93,7 +93,7 @@ class Main {
 		subjectFill = PolyFill.EvenOdd;
 		clipFill = PolyFill.EvenOdd;
 		
-		outputSettings = new ClipOutputSettings ( true, true, false, false, true );
+		outputSettings = new ClipOutputSettings ( true, false, false, false, false );
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -111,8 +111,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		testRandomPolyClipping ( 100, 10 );
-		return;
+		/*testRandomPolyClipping ( 100, 10 );
+		return;*/
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -134,7 +134,7 @@ class Main {
 		addInputPolygon ( clip, PolyKind.Clip );
 		addInputPolygon ( subject, PolyKind.Subject );*/
 		
-		/*// Test: simple case of one self-intersection (hourglass)
+		// Test: simple case of one self-intersection (hourglass)
 		var subject = [
 			new Point ( 10, 10 ),
 			new Point ( 0, 300 ),
@@ -151,7 +151,7 @@ class Main {
 		];
 		
 		addInputPolygon ( subject, PolyKind.Subject );
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
 		/*// Test: two clip polygons
 		var subject = [
@@ -745,7 +745,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: cross in circle nonzero test
+		/*// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -780,7 +780,7 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: simple triangulation test
 		var subj1 = [
