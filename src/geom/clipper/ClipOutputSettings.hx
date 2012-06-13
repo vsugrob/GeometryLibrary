@@ -7,23 +7,28 @@ package geom.clipper;
 
 class ClipOutputSettings {
 	public var polygons:Bool;
-	public var triangles:Bool;
+	public var monotoneNoHoleTriangles:Bool;
 	public var convex:Bool;
 	public var bounds:Bool;
-	public var monotone:Bool;
-	public inline var noOutput (getNoOutput, null):Bool;
+	public var monotoneNoHolePolygons:Bool;
 	
-	private inline function getNoOutput ():Bool {
-		return	!( polygons || triangles || convex || bounds || monotone );
+	public var monotoneNoHoleOutputInvolved (getMonotoneNoHoleOutputInvolved, null):Bool;
+	private inline function getMonotoneNoHoleOutputInvolved ():Bool {
+		return	monotoneNoHolePolygons || monotoneNoHoleTriangles;
 	}
 	
-	public function new ( generatePolygons:Bool = true, generateTriangles:Bool = false,
-		generateConvex:Bool = false, generateBounds:Bool = false, generateMonotone:Bool = false )
+	public var noOutput (getNoOutput, null):Bool;
+	private inline function getNoOutput ():Bool {
+		return	!( polygons || monotoneNoHoleTriangles || convex || bounds || monotoneNoHolePolygons );
+	}
+	
+	public function new ( generatePolygons:Bool = true, generateMonotoneNoHoleTriangles:Bool = false,
+		generateConvex:Bool = false, generateBounds:Bool = false, generateMonotoneNoHolePolygons:Bool = false )
 	{
 		this.polygons = generatePolygons;
-		this.triangles = generateTriangles;
+		this.monotoneNoHoleTriangles = generateMonotoneNoHoleTriangles;
 		this.convex = generateConvex;
 		this.bounds = generateBounds;
-		this.monotone = generateMonotone;
+		this.monotoneNoHolePolygons = generateMonotoneNoHolePolygons;
 	}
 }

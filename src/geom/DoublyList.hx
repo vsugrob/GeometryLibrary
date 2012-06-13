@@ -8,6 +8,10 @@ package geom;
 class DoublyList <TElement> {
 	public var first:DoublyListNode <TElement>;
 	public var last:DoublyListNode <TElement>;
+	public var isEmpty (getIsEmpty, null):Bool;
+	private inline function getIsEmpty ():Bool {
+		return	first == null && last == null;
+	}
 	
 	public function new () {}
 	
@@ -30,24 +34,28 @@ class DoublyList <TElement> {
 	}
 	
 	public inline function prepend ( list:DoublyList <TElement> ):Void {
-		if ( first == null ) {
-			first = list.first;
-			last = list.last;
-		} else {
-			first.prev = list.last;
-			list.last.next = first;
-			first = list.first;
+		if ( !list.isEmpty ) {
+			if ( first == null ) {
+				first = list.first;
+				last = list.last;
+			} else {
+				first.prev = list.last;
+				list.last.next = first;
+				first = list.first;
+			}
 		}
 	}
 	
 	public inline function append ( list:DoublyList <TElement> ):Void {
-		if ( last == null ) {
-			first = list.first;
-			last = list.last;
-		} else {
-			last.next = list.first;
-			list.first.prev = last;
-			last = list.last;
+		if ( !list.isEmpty ) {
+			if ( last == null ) {
+				first = list.first;
+				last = list.last;
+			} else {
+				last.next = list.first;
+				list.first.prev = last;
+				last = list.last;
+			}
 		}
 	}
 	

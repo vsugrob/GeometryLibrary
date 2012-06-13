@@ -63,6 +63,8 @@ class ClipOutputPolygon implements IClipOutputReceiver {
 		}
 	}
 	
+	public inline function flush ():Void {}
+	
 	public inline function iterator ():Iterator <Point> {
 		return	points.iterator ();
 	}

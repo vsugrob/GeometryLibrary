@@ -1,6 +1,7 @@
-package geom.clipper.output;
+package geom.clipper.output.monotone;
 import flash.geom.Point;
 import geom.clipper.ActiveEdge;
+import geom.clipper.output.BottomUpEdge;
 
 /**
  * ...
@@ -15,6 +16,13 @@ class OutputBound {
 	public var next:OutputBound;
 	
 	public function new () { }
+	
+	public inline function isConvex ( isRight:Bool ):Bool {
+		if ( isRight )
+			return	edge.dx >= prevDx;
+		else
+			return	edge.dx <= prevDx;
+	}
 	
 	public static inline function newFromActiveEdge ( activeEdge:ActiveEdge ):OutputBound {
 		var bound = new OutputBound ();

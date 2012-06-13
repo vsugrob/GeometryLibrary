@@ -13,4 +13,5 @@ interface IClipOutputReceiver {
 	public function addPointToRightBound ( p:Point, aelNode:ActiveEdge ):Void;
 	public function addLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void;
 	public function addLocalMax ( e1Node:ActiveEdge, e2Node:ActiveEdge, closestContribNode:ActiveEdge, p:Point ):Void;
+	public function flush ():Void;
 }

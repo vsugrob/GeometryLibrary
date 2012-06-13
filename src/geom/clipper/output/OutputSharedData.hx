@@ -1,4 +1,5 @@
 package geom.clipper.output;
+import geom.clipper.output.monotone.OutputBound;
 
 /**
  * ...

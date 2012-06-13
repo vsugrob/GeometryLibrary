@@ -1,6 +1,7 @@
-package geom.clipper.output;
+package geom.clipper.output.monotone;
 import flash.geom.Point;
 import geom.ChainedPolygon;
+import geom.clipper.ClipOutputSettings;
 import geom.DoublyList;
 
 /**
@@ -8,20 +9,14 @@ import geom.DoublyList;
  * @author vsugrob
  */
 
-class MonotoneColumn {
-	public var polys:DoublyList <ChainedPolygon>;
+class MonotonePolygonColumn {
 	private var poly:ChainedPolygon;
-	public var leftBound:OutputBound;
-	public var rightBound (getRightBound, null):OutputBound;
-	private inline function getRightBound ():OutputBound {
-		return	leftBound.next;
-	}
+	public var polys:DoublyList <ChainedPolygon>;
 	
-	public function new ( p:Point, leftBound:OutputBound ) {
+	public inline function new ( p:Point ) {
 		this.poly = ChainedPolygon.create ( p );
 		this.polys = new DoublyList <ChainedPolygon> ();
 		this.polys.insertFirst ( this.poly );
-		this.leftBound = leftBound;
 	}
 	
 	public inline function addLeft ( p:Point ):Void {
@@ -32,11 +27,7 @@ class MonotoneColumn {
 		poly.appendPoint ( p );
 	}
 	
-	public inline function merge ( other:MonotoneColumn ):Void {
+	public inline function merge ( other:MonotonePolygonColumn ):Void {
 		polys.prepend ( other.polys );
-	}
-	
-	public inline function flush ():Void {
-		// no action
 	}
 }

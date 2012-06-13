@@ -6,10 +6,11 @@ import flash.geom.Point;
 import flash.Vector;
 import geom.ChainedPolygon;
 import geom.clipper.output.ClipOutput;
-import geom.clipper.output.ClipOutputTriangles;
 import geom.clipper.output.OutputSharedData;
+import geom.clipper.output.Primitive;
 import geom.clipper.output.PrimitiveType;
 import geom.ConcatIterator;
+import geom.DoublyList;
 import geom.DoublyListNode;
 import geom.TakeIterator;
 
@@ -965,8 +966,10 @@ class VattiClipper {
 		
 		if ( aelNode1.output != aelNode2.output )	// aelNode1 and aelNode2 have different output instances. Merge them.
 			mergeOutput ( aelNode1, aelNode2 );
-		else
+		else {
+			aelNode1.output.flush ();
 			outputs.add ( aelNode1.output );
+		}
 	}
 	
 	private function mergeOutput ( e1:ActiveEdge, f1:ActiveEdge ):Void {
@@ -1678,11 +1681,11 @@ class VattiClipper {
 		graphics.drawPath ( cmds, coords, fill == PolyFill.EvenOdd ? GraphicsPathWinding.EVEN_ODD : GraphicsPathWinding.NON_ZERO );
 	}
 	
-	public static function drawTriangles ( triOut:ClipOutputTriangles, graphics:Graphics, strokeWidth:Float = 1 ):Void {
-		if ( triOut == null )
+	public static function drawTriangles ( primities:DoublyList <Primitive>, graphics:Graphics, strokeWidth:Float = 1 ):Void {
+		if ( primities == null )
 			return;
 		
-		var primIt = triOut.primities.iterator ();
+		var primIt = primities.iterator ();
 		
 		if ( !primIt.hasNext () )
 			return;
@@ -1765,7 +1768,7 @@ class VattiClipper {
 	
 	public function drawOutTriangles ( graphics:Graphics, strokeWidth:Float = 1 ):Void {
 		for ( output in outputs ) {
-			drawTriangles ( output.triOut, graphics, strokeWidth );
+			drawTriangles ( output.monoOut.leftBound.column.trianglesColumn.primities, graphics, strokeWidth );
 		}
 	}
 	
@@ -1777,13 +1780,17 @@ class VattiClipper {
 			var monoOut = output.monoOut;
 			
 			if ( monoOut != null ) {
-				for ( poly in monoOut.leftBound.column.polys ) {
-					beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth,
-						fill, fillOpacity );
-					
-					drawPoly ( poly, graphics );
-					
-					endDrawPoly ( graphics );
+				var monoPolyColumn = monoOut.leftBound.column.monoPolyColumn;
+				
+				if ( monoPolyColumn != null ) {
+					for ( poly in monoPolyColumn.polys ) {
+						beginDrawPoly ( graphics, stroke, strokeOpacity, strokeWidth,
+							fill, fillOpacity );
+						
+						drawPoly ( poly, graphics );
+						
+						endDrawPoly ( graphics );
+					}
 				}
 			}
 		}

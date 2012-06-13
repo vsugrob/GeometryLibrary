@@ -1,6 +1,7 @@
-package geom.clipper.output;
+package geom.clipper.output.monotone;
 import flash.geom.Point;
 import geom.clipper.ActiveEdge;
+import geom.clipper.ClipOutputSettings;
 import geom.clipper.Side;
 
 /**
@@ -10,13 +11,15 @@ import geom.clipper.Side;
 
 class ClipOutputMonotone implements IClipOutputReceiver {
 	public var spawnIndex:Int;
-	public var sharedData:OutputSharedData;
 	public var leftBound:OutputBound;
 	public var rightBound:OutputBound;
+	private var sharedData:OutputSharedData;
+	private var outputSettings:ClipOutputSettings;
 	
-	public inline function new ( spawnIndex:Int, sharedData:OutputSharedData ) {
+	public inline function new ( spawnIndex:Int, sharedData:OutputSharedData, outputSettings:ClipOutputSettings ) {
 		this.spawnIndex = spawnIndex;
 		this.sharedData = sharedData;
+		this.outputSettings = outputSettings;
 	}
 	
 	public inline function addPointToLeftBound ( p:Point, aelNode:ActiveEdge ):Void {
@@ -133,7 +136,7 @@ class ClipOutputMonotone implements IClipOutputReceiver {
 			closestBound.next.prev = bound2;	// B2 <- N
 			closestBound.next = bound1;			// P -> B1
 			
-			column = new MonotoneColumn ( op, bound2 );
+			column = new MonotoneColumn ( op, bound2, outputSettings );
 			bound2.column = column;
 			
 			bound1.addRightPointOnHorizontal ( op, BottomUpEdge.LeftHorizontal );
@@ -173,11 +176,15 @@ class ClipOutputMonotone implements IClipOutputReceiver {
 				}
 			}
 			
-			column = new MonotoneColumn ( p, bound1 );
+			column = new MonotoneColumn ( p, bound1, outputSettings );
 			bound1.column = column;
 			
 			leftBound = bound1;
 			rightBound = bound2;
 		}
+	}
+	
+	public inline function flush ():Void {
+		leftBound.column.flush ();
 	}
 }

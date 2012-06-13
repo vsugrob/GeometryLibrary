@@ -34,9 +34,6 @@ class Main {
 	static var forceOneClip:Bool;
 	static var randomOuputStrokes:Bool;
 	static var emphasizeHoles:Bool;
-	static var drawContributedPolys:Bool;
-	static var drawMonos:Bool;
-	static var drawTriangles:Bool;
 	static var outputSettings:ClipOutputSettings;
 	
 	static function testRandomPolyClipping ( numTestsPerFrame:UInt = 20, numPoints:UInt = 100 ):Void {
@@ -87,8 +84,6 @@ class Main {
 	
 	static function main () {
 		forceOneClip = true;
-		//drawContributedPolys = true;
-		drawMonos = true;
 		
 		clipOp = ClipOperation.Intersection;
 		//clipOp = ClipOperation.Difference;
@@ -98,7 +93,7 @@ class Main {
 		subjectFill = PolyFill.EvenOdd;
 		clipFill = PolyFill.EvenOdd;
 		
-		outputSettings = new ClipOutputSettings ( true, false, false, false, true );
+		outputSettings = new ClipOutputSettings ( true, true, false, false, true );
 		
 		var stage = Lib.current.stage;
 		stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -116,8 +111,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*testRandomPolyClipping ( 100, 10 );
-		return;*/
+		testRandomPolyClipping ( 100, 10 );
+		return;
 		
 		/*// Test: poly with two contributing local maximas
 		var subject = [
@@ -1008,13 +1003,13 @@ class Main {
 				emphasizeHoles = !emphasizeHoles;
 				forceOneClip = true;
 			} else if ( kb.keyCode == 84 ) {	// t
-				drawTriangles = !drawTriangles;
+				outputSettings.monotoneNoHoleTriangles = !outputSettings.monotoneNoHoleTriangles;
 				forceOneClip = true;
 			} else if ( kb.keyCode == 68 ) {	// d
-				drawContributedPolys = !drawContributedPolys;
+				outputSettings.polygons = !outputSettings.polygons;
 				forceOneClip = true;
 			} else if ( kb.keyCode == 79 ) {	// o
-				drawMonos = !drawMonos;
+				outputSettings.monotoneNoHolePolygons = !outputSettings.monotoneNoHolePolygons;
 				forceOneClip = true;
 			}
 		} );
@@ -1071,10 +1066,10 @@ class Main {
 			strokeOpacity = 0.9;
 		}
 		
-		if ( drawContributedPolys )
+		if ( outputSettings.polygons )
 			clipper.drawContributedPolys ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, 0xaa7700, 0.5, emphasizeHoles );
 		
-		if ( drawMonos ) {
+		if ( outputSettings.monotoneNoHolePolygons ) {
 			var fillColor:Null <UInt> = 0xaa7700;
 			var fillOpacity:Float = 0.5;
 			
@@ -1088,7 +1083,7 @@ class Main {
 			clipper.drawOutMonos ( debugSprite.graphics, strokeColor, strokeOpacity, 2 / zoom, fillColor, fillOpacity );
 		}
 		
-		if ( drawTriangles )
+		if ( outputSettings.monotoneNoHoleTriangles )
 			clipper.drawOutTriangles ( debugSprite.graphics, 1 / zoom );
 	}
 	
