@@ -41,22 +41,21 @@ class ClipOutputMonotone implements IClipOutputReceiver {
 	private static inline function completeHole ( leftBound:OutputBound, p:Point ):Void {
 		var rightBound = leftBound.prev;
 		
-		// At this point leftBound is after the rightBound in bound list
+		// Note that leftBound is after the rightBound in bound list
 		var nextRightBound = leftBound.next;
 		var nextRightEdge = BottomUpEdge.newFromBottomUpEdge ( nextRightBound.edge );
 		var op = new Point ( nextRightBound.edge.topX ( p.y ), p.y );
-		leftBound.addLeftPointOnNewEdge ( p, p, op );	// TODO: beware of the equality of p and op! It leads to NaN in edge.dx!
-		nextRightBound.addRightPointOnNewEdge ( op, op, p );	// Here we changed nextRightBound's edge
+		leftBound.addLeftPointOnHorizontal ( p, BottomUpEdge.RightHorizontal );
+		nextRightBound.addRightPointOnHorizontal ( op, BottomUpEdge.LeftHorizontal );	// Here we change nextRightBound's edge
 		leftBound.column.flush ();
 		
-		rightBound.addRightPointOnNewEdge ( p, p, op );	// TODO: beware of the equality of p and op! It leads to NaN in edge.dx!
+		rightBound.addRightPointOnHorizontal ( p, BottomUpEdge.RightHorizontal );
 		
 		// Remove ended bounds from the bound list
 		removeMiddleBounds ( rightBound, leftBound );
 		
-		//nextRightBound.edge = rightBound.edge;	// TODO: unnecessary? i think only prevDx is needed
-		nextRightBound.prevDx = rightBound.prevDx;	// TODO: btw, prevDx is constant -inf
-		nextRightBound.addRightPointOnBottomUpEdge ( op, nextRightEdge );	// Restore nextRightBound's edge
+		nextRightBound.prevDx = BottomUpEdge.RightHorizontal;
+		nextRightBound.addRightPointOnBottomUpEdge ( op, nextRightEdge );	// And here we restore nextRightBound's edge
 	}
 	
 	/**
@@ -123,8 +122,8 @@ class ClipOutputMonotone implements IClipOutputReceiver {
 			 * Moreover, closestBound is left bound.*/
 			var nextRightBound = closestBound.next;
 			var op = new Point ( nextRightBound.edge.topX ( p.y ), p.y );
-			bound1 = closestBound.clone ();
-			bound2 = OutputBound.newFromPoints ( op, p );	// TODO: beware of the equality of p and op! It leads to NaN in edge.dx!
+			bound1 = nextRightBound.clone ();
+			bound2 = OutputBound.newHorizontal ( op, BottomUpEdge.LeftHorizontal );
 			
 			// Connect bounds P <-> B1 <-> B2 <-> N
 			bound1.next = bound2;				// B1 -> B2
@@ -137,7 +136,7 @@ class ClipOutputMonotone implements IClipOutputReceiver {
 			column = new MonotoneColumn ( op, bound2 );
 			bound2.column = column;
 			
-			bound1.addRightPointOnNewEdge ( op, op, p );	// TODO: beware of the equality of p and op! It leads to NaN in edge.dx!
+			bound1.addRightPointOnHorizontal ( op, BottomUpEdge.LeftHorizontal );
 			bound1.addRightPointOnActiveEdge ( p, aelNode1 );
 			bound2.addLeftPointOnActiveEdge ( p, aelNode2 );
 			

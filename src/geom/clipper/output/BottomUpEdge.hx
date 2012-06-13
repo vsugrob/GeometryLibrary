@@ -11,6 +11,8 @@ class BottomUpEdge {
 	public var bottomX:Float;
 	public var bottomY:Float;
 	public var dx:Float;
+	public static inline var LeftHorizontal:Float = Math.POSITIVE_INFINITY;
+	public static inline var RightHorizontal:Float = Math.NEGATIVE_INFINITY;
 	
 	public inline function new ( bottomX:Float, bottomY:Float, dx:Float ) {
 		this.bottomX = bottomX;
@@ -56,6 +58,26 @@ class BottomUpEdge {
 		this.bottomX = edge.bottomX;
 		this.bottomY = edge.bottomY;
 		this.dx = edge.dx;
+	}
+	
+	/**
+	 * Set this edge instance to represent horizontal edge.
+	 * @param	pStart	Start point of the edge.
+	 * @param	dx	Must be +/-Infinity.
+	 */
+	public static inline function newHorizontal ( pStart:Point, dx:Float ):BottomUpEdge {
+		return	new BottomUpEdge ( pStart.x, pStart.y, dx );
+	}
+	
+	/**
+	 * Set this edge instance to represent horizontal edge.
+	 * @param	pStart	Start point of the edge.
+	 * @param	dx	Must be +/-Infinity.
+	 */
+	public inline function setHorizontal ( pStart:Point, dx:Float ):Void {
+		this.bottomX = pStart.x;
+		this.bottomY = pStart.y;
+		this.dx = dx;
 	}
 	
 	public inline function topX ( y:Float ):Float {

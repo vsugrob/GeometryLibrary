@@ -313,7 +313,7 @@ class Main {
 		addInputPolygon ( bgPoly, PolyKind.Subject );
 		addInputPolygon ( tooth, PolyKind.Clip );*/
 		
-		// Test: q-shaped poly.
+		/*// Test: q-shaped poly.
 		var bgPoly = [
 			//new Point ( -10, -10 ),
 			//new Point ( 600, 0 ),
@@ -339,7 +339,7 @@ class Main {
 		];
 		
 		addInputPolygon ( bgPoly, PolyKind.Subject );
-		addInputPolygon ( tooth, PolyKind.Clip );
+		addInputPolygon ( tooth, PolyKind.Clip );*/
 		
 		/*// Test: many-rooted tooth
 		var bgPoly = [
@@ -750,7 +750,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: cross in circle nonzero test
+		// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -785,7 +785,7 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
 		/*// Test: simple triangulation test
 		var subj1 = [

@@ -32,6 +32,14 @@ class OutputBound {
 		return	bound;
 	}
 	
+	public static inline function newHorizontal ( pStart:Point, dx:Float ):OutputBound {
+		var bound = new OutputBound ();
+		bound.edge = BottomUpEdge.newHorizontal ( pStart, dx );
+		bound.prevDx = bound.edge.dx;
+		
+		return	bound;
+	}
+	
 	public inline function clone ():OutputBound {
 		var bound = new OutputBound ();
 		bound.edge = BottomUpEdge.newFromBottomUpEdge ( this.edge );
@@ -72,6 +80,18 @@ class OutputBound {
 	
 	public inline function addRightPointOnBottomUpEdge ( p:Point, otherEdge:BottomUpEdge ):Void {
 		edge.setFromBottomUpEdge ( otherEdge );
+		prev.column.addRight ( p );
+		prevDx = edge.dx;
+	}
+	
+	public inline function addLeftPointOnHorizontal ( p:Point, dx:Float ):Void {
+		edge.setHorizontal ( p, dx );
+		column.addLeft ( p );
+		prevDx = edge.dx;
+	}
+	
+	public inline function addRightPointOnHorizontal ( p:Point, dx:Float ):Void {
+		edge.setHorizontal ( p, dx );
 		prev.column.addRight ( p );
 		prevDx = edge.dx;
 	}
