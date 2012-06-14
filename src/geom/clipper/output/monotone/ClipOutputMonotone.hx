@@ -47,7 +47,7 @@ class ClipOutputMonotone implements IClipOutputReceiver {
 		// Note that leftBound is after the rightBound in bound list
 		var nextRightBound = leftBound.next;
 		var nextRightEdge = BottomUpEdge.newFromBottomUpEdge ( nextRightBound.edge );
-		var op = new Point ( nextRightBound.edge.topX ( p.y ), p.y );
+		var op = new Point ( nextRightBound.topX ( p.y ), p.y );
 		leftBound.addLeftPointOnHorizontal ( p, BottomUpEdge.RightHorizontal );
 		nextRightBound.addRightPointOnHorizontal ( op, BottomUpEdge.LeftHorizontal );	// Here we change nextRightBound's edge
 		leftBound.column.flush ();
@@ -124,7 +124,7 @@ class ClipOutputMonotone implements IClipOutputReceiver {
 			/* In case of a hole closestBound and closestBound.next won't contain null.
 			 * Moreover, closestBound is left bound.*/
 			var nextRightBound = closestBound.next;
-			var op = new Point ( nextRightBound.edge.topX ( p.y ), p.y );
+			var op = new Point ( nextRightBound.topX ( p.y ), p.y );
 			bound1 = nextRightBound.clone ();
 			bound2 = OutputBound.newHorizontal ( op, BottomUpEdge.LeftHorizontal );
 			

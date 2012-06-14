@@ -35,7 +35,7 @@ class MonotoneConvexColumn {
 		poly.prependPoint ( p );
 		
 		if ( !leftBound.isConvexLeft () ) {
-			var op = new Point ( rightBound.edge.topX ( p.y ), p.y );
+			var op = new Point ( rightBound.topX ( p.y ), p.y );
 			poly.appendPoint ( op );
 			
 			poly = ChainedPolygon.create ( p );
@@ -48,7 +48,7 @@ class MonotoneConvexColumn {
 		poly.appendPoint ( p );
 		
 		if ( !rightBound.isConvexRight () ) {
-			var op = new Point ( leftBound.edge.topX ( p.y ), p.y );
+			var op = new Point ( leftBound.topX ( p.y ), p.y );
 			poly.prependPoint ( op );
 			
 			poly = ChainedPolygon.create ( p );

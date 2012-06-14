@@ -8,11 +8,15 @@ import geom.clipper.ActiveEdge;
  */
 
 class BottomUpEdge {
+	public static inline var LeftHorizontal:Float = Math.POSITIVE_INFINITY;
+	public static inline var RightHorizontal:Float = Math.NEGATIVE_INFINITY;
 	public var bottomX:Float;
 	public var bottomY:Float;
 	public var dx:Float;
-	public static inline var LeftHorizontal:Float = Math.POSITIVE_INFINITY;
-	public static inline var RightHorizontal:Float = Math.NEGATIVE_INFINITY;
+	public var isHorizontal (getIsHorizontal, null):Bool;
+	private inline function getIsHorizontal ():Bool {
+		return	!Math.isFinite ( dx );
+	}
 	
 	public inline function new ( bottomX:Float, bottomY:Float, dx:Float ) {
 		this.bottomX = bottomX;
@@ -80,6 +84,12 @@ class BottomUpEdge {
 		this.dx = dx;
 	}
 	
+	/**
+	 * Calculates X-coordinate corresponding to given Y-coordinate.
+	 * @warning	This function returns NaN when edge is horizontal.
+	 * @param	y	Y-ccordinate used to calculate corresponding X-coordinate.
+	 * @return	X-coordinate corresponding to given Y-coordinate.
+	 */
 	public inline function topX ( y:Float ):Float {
 		return	bottomX + dx * ( y - bottomY );
 	}

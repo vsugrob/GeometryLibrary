@@ -49,7 +49,6 @@ class MonotoneTrianglesColumn {
 		addPoint ( p, rightBound, leftBound, true );
 	}
 	
-	// TODO: deal with topX of the horizontal edge.
 	private inline function addPoint ( p:Point, thisBound:OutputBound, oppositeBound:OutputBound, newPointIsRight:Bool ):Void {
 		if ( inStrip ) {
 			if ( lastPointWasRight == newPointIsRight ) {	// New point is on the same side as previous
@@ -67,7 +66,7 @@ class MonotoneTrianglesColumn {
 					
 					inStrip = false;
 				} else {
-					var op = new Point ( oppositeBound.edge.topX ( p.y ), p.y );
+					var op = new Point ( oppositeBound.topX ( p.y ), p.y );
 					points.appendPoint ( op );
 					points.appendPoint ( p );
 					count += 2;
@@ -87,7 +86,7 @@ class MonotoneTrianglesColumn {
 					points.appendPoint ( p );
 					count++;
 				} else {
-					var op = new Point ( oppositeBound.edge.topX ( p.y ), p.y );
+					var op = new Point ( oppositeBound.topX ( p.y ), p.y );
 					points.appendPoint ( p );
 					points.appendPoint ( op );
 					newApex = p;

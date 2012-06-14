@@ -745,7 +745,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: cross in circle nonzero test
+		/*// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -780,7 +780,7 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: simple triangulation test
 		var subj1 = [
@@ -851,6 +851,32 @@ class Main {
 		addInputPolygon ( subj2, PolyKind.Subject );
 		addInputPolygon ( subj3, PolyKind.Subject );
 		clipOp = ClipOperation.Union;*/
+		
+		// Test: polys which intersection leads to
+		// topX () call on horizontal edge in convex and
+		// triangle output generation.
+		var subj = [
+			new Point ( 0, 0 ),
+			new Point ( 400, 0 ),
+			new Point ( 400, 400 ),
+			new Point ( 0, 400 ),
+		];
+		
+		var clip = [
+			new Point ( 100, 300 ),
+			new Point ( 500, 300 ),
+			new Point ( 500, 200 ),
+			new Point ( 300, 200 ),
+			new Point ( 300, 100 ),
+			new Point ( 100, 100 ),
+			new Point ( 100, 200 ),
+			new Point ( 200, 200 ),
+			new Point ( 100, 200 ),
+		];
+		
+		addInputPolygon ( subj, PolyKind.Subject );
+		addInputPolygon ( clip, PolyKind.Clip );
+		clipOp = ClipOperation.Intersection;
 		
 		/*var angle = 0.0;
 		var dAngle = 10;
