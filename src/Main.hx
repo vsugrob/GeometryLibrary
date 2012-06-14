@@ -13,6 +13,7 @@ import flash.Lib;
 import geom.clipper.ClipOperation;
 import geom.clipper.ClipOutputSettings;
 import geom.clipper.output.ClipOutput;
+import geom.clipper.PolyBounds;
 import geom.clipper.PolyFill;
 import geom.clipper.PolyKind;
 import geom.clipper.VattiClipper;
@@ -36,13 +37,14 @@ class Main {
 	static var emphasizeHoles:Bool;
 	static var outputSettings:ClipOutputSettings;
 	
-	static function testRandomPolyClipping ( numTestsPerFrame:UInt = 20, numPoints:UInt = 100 ):Void {
+	static function testRandomPolyClipping ( frameRate:Float = 100, numTestsPerFrame:UInt = 20, numPoints:UInt = 100 ):Void {
 		var stage = Lib.current.stage;
-		var prevTime:Float = Date.now ().getTime ();
-		var startTime:Float = prevTime;
+		var prevTickTime:Float = 0;
+		var timeElapsed:Float = 0;
 		var numClipsMade:UInt = 0;
 		var totalClipsMade:UInt = 0;
-		stage.frameRate = 100;
+		stage.frameRate = frameRate;
+		clipper = new VattiClipper ( outputSettings );
 		
 		stage.addEventListener ( Event.ENTER_FRAME, function ( e:Event ) {
 			for ( i in 0...numTestsPerFrame ) {
@@ -51,12 +53,18 @@ class Main {
 				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( numPoints, 0, 600 ), PolyKind.Subject ) );
 				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( numPoints, 0, 600 ), PolyKind.Clip ) );
 				
-				clipper = new VattiClipper ( outputSettings );
+				clipper.clear ();
+				var startTime:Float = Date.now ().getTime ();
 				
 				for ( inputPoly in inputPolys )
 					clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
 				
 				clipper.clip ( clipOp, subjectFill, clipFill );
+				
+				var endTime:Float = Date.now ().getTime ();
+				var timeDelta:Float = endTime - startTime;
+				timeElapsed += timeDelta;
+				var timeSinceLastTick = timeElapsed - prevTickTime;
 				
 				numClipsMade++;
 				totalClipsMade++;
@@ -67,15 +75,65 @@ class Main {
 				
 				//drawCurrentStep ( panAndZoom.zoom );
 				
-				var nowTime:Float = Date.now ().getTime ();
-				var timeDelta:Float = nowTime - prevTime;
-				
-				if ( timeDelta >= 1000 ) {
-					prevTime = nowTime;
-					var timeElapsed = nowTime - startTime;
+				if ( timeSinceLastTick >= 1000 ) {
+					prevTickTime = timeElapsed;
 					var avgClipsPerSecond = totalClipsMade / ( timeElapsed / 1000 );
 					
-					trace ( "Clips made: " + numClipsMade + ", total: " + totalClipsMade + ", avgClipsPerSecond: " + avgClipsPerSecond );
+					trace ( "Clips per last second: " + Math.floor ( numClipsMade * 1000.0 / timeSinceLastTick ) +
+						", total: " + totalClipsMade + ", avgClipsPerSecond: " + avgClipsPerSecond );
+					
+					numClipsMade = 0;
+				}
+			}
+		} );
+	}
+	
+	static function testRandomPolyClippingWithPolyBounds ( frameRate:Float = 100, numTestsPerFrame:UInt = 20, numPoints:UInt = 100 ):Void {
+		var stage = Lib.current.stage;
+		var prevTickTime:Float = 0;
+		var timeElapsed:Float = 0;
+		var numClipsMade:UInt = 0;
+		var totalClipsMade:UInt = 0;
+		stage.frameRate = frameRate;
+		clipper = new VattiClipper ( outputSettings );
+		
+		var cachedPoly = new PolyBounds ( DebugPolyMorpher.genRandomPoly ( numPoints, 0, 600 ), PolyKind.Subject );
+		
+		stage.addEventListener ( Event.ENTER_FRAME, function ( e:Event ) {
+			for ( i in 0...numTestsPerFrame ) {
+				inputPolys = new List <InputPolygon> ();
+				
+				inputPolys.add ( new InputPolygon ( DebugPolyMorpher.genRandomPoly ( numPoints, 0, 600 ), PolyKind.Clip ) );
+				
+				clipper.clear ();
+				var startTime:Float = Date.now ().getTime ();
+				clipper.addPolyBounds ( cachedPoly );
+				
+				for ( inputPoly in inputPolys )
+					clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+				
+				clipper.clip ( clipOp, subjectFill, clipFill );
+				
+				var endTime:Float = Date.now ().getTime ();
+				var timeDelta:Float = endTime - startTime;
+				timeElapsed += timeDelta;
+				var timeSinceLastTick = timeElapsed - prevTickTime;
+				
+				numClipsMade++;
+				totalClipsMade++;
+				
+				//debugSprite.graphics.clear ();
+				//drawInputPolys ( debugSprite.graphics, panAndZoom.zoom );
+				//cachedPoly.drawLml ( debugSprite.graphics );
+				//clipper.drawOutPolys ( debugSprite.graphics );
+				
+				if ( timeSinceLastTick >= 1000 ) {
+					prevTickTime = timeElapsed;
+					var avgClipsPerSecond = totalClipsMade / ( timeElapsed / 1000 );
+					
+					trace ( "Clips per last second: " + Math.floor ( numClipsMade * 1000.0 / timeSinceLastTick ) +
+						", total: " + totalClipsMade + ", avgClipsPerSecond: " + avgClipsPerSecond );
+					
 					numClipsMade = 0;
 				}
 			}
@@ -111,7 +169,10 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*testRandomPolyClipping ( 100, 10 );
+		/*testRandomPolyClipping ( 100, 100, 10 );
+		return;*/
+		
+		/*testRandomPolyClippingWithPolyBounds ( 100, 100, 10 );
 		return;*/
 		
 		/*// Test: poly with two contributing local maximas
@@ -745,7 +806,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		/*// Test: cross in circle nonzero test
+		// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -780,7 +841,7 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );*/
+		addInputPolygon ( clip, PolyKind.Clip );
 		
 		/*// Test: simple triangulation test
 		var subj1 = [
@@ -852,7 +913,7 @@ class Main {
 		addInputPolygon ( subj3, PolyKind.Subject );
 		clipOp = ClipOperation.Union;*/
 		
-		// Test: polys which intersection leads to
+		/*// Test: polys which intersection leads to
 		// topX () call on horizontal edge in convex and
 		// triangle output generation.
 		var subj = [
@@ -876,7 +937,7 @@ class Main {
 		
 		addInputPolygon ( subj, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
-		clipOp = ClipOperation.Intersection;
+		clipOp = ClipOperation.Intersection;*/
 		
 		/*var angle = 0.0;
 		var dAngle = 10;
@@ -951,8 +1012,13 @@ class Main {
 			
 			clipper = new VattiClipper ( outputSettings );
 			
-			for ( inputPoly in inputPolys )
-				clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+			//for ( inputPoly in inputPolys )
+				//clipper.addPolygon ( inputPoly.pts, inputPoly.kind );
+			
+			for ( inputPoly in inputPolys ) {
+				var polyBounds = new PolyBounds ( inputPoly.pts, inputPoly.kind );
+				clipper.addPolyBounds ( polyBounds );
+			}
 			
 			clipper.clip ( clipOp, subjectFill, clipFill );
 			

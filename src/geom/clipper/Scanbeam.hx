@@ -6,9 +6,9 @@ package geom.clipper;
  */
 
 /**
- * Singly-linked list of the scanlines which encloses scanbeams. List is maintained
- * sorted descending by y-coordinate. Note that y-coordinates are distinct i.e. there
- * will be no scanbeams with equal ys.
+ * Singly-linked list of the scanlines enclosing scanbeams. List sorted descending
+ * by Y-coordinate. Note that Y-coordinates are distinct i.e. list can't contain
+ * scanbeams with same Y's.
  */
 class Scanbeam {
 	/**
