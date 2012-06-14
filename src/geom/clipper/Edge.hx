@@ -34,7 +34,7 @@ class Edge {
 		return	Math.isNaN ( dx );
 	}
 	
-	public function new ( bottomX:Float, topY:Float, dx:Float ) {
+	public function new ( bottomX:Float, topY:Float, dx:Float = 0 ) {
 		this.bottomX = bottomX;
 		this.topY = topY;
 		this.dx = dx;

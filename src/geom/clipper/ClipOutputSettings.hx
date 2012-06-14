@@ -12,6 +12,10 @@ class ClipOutputSettings {
 	public var monotoneNoHolePolygons:Bool;
 	public var bounds:Bool;
 	public var boundsKind:PolyKind;
+	/**
+	 * PolyBounds instance that will receive bounds output.
+	 */
+	public var polyBoundsReceiver:PolyBounds;
 	
 	public var monotoneNoHoleOutputInvolved (getMonotoneNoHoleOutputInvolved, null):Bool;
 	private inline function getMonotoneNoHoleOutputInvolved ():Bool {
@@ -25,13 +29,14 @@ class ClipOutputSettings {
 	
 	public function new ( generatePolygons:Bool = true, generateMonotoneNoHoleTriangles:Bool = false,
 		generateMonotoneNoHoleConvex:Bool = false, generateMonotoneNoHolePolygons:Bool = false,
-		generateBounds:Bool = false, boundsKind:PolyKind = null )
+		generateBounds:Bool = false, boundsKind:PolyKind = null, polyBoundsReceiver:PolyBounds = null )
 	{
 		this.polygons = generatePolygons;
 		this.monotoneNoHoleTriangles = generateMonotoneNoHoleTriangles;
 		this.monotoneNoHoleConvex = generateMonotoneNoHoleConvex;
 		this.monotoneNoHolePolygons = generateMonotoneNoHolePolygons;
 		this.bounds = generateBounds;
-		this.boundsKind = boundsKind == null ? PolyKind.Subject : boundsKind;
+		this.boundsKind = boundsKind;
+		this.polyBoundsReceiver = polyBoundsReceiver;
 	}
 }

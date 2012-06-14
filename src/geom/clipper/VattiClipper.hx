@@ -91,8 +91,9 @@ class VattiClipper extends PolyBounds {
 	/**
 	 * Clears added polygons and all data that was accumulated during last clip operation.
 	 */
-	public function clear ():Void {
-		lml = null;
+	public override function clear ():Void {
+		super.clear ();
+		
 		sbl = null;
 		ael = null;
 		hel = null;
@@ -115,6 +116,14 @@ class VattiClipper extends PolyBounds {
 		
 		if ( lml == null )	// Input was empty
 			return;
+		
+		if ( this.outputSettings.bounds ) {
+			if ( this.outputSettings.boundsKind == null )
+				this.outputSettings.boundsKind = PolyKind.Subject;
+			
+			if ( this.outputSettings.polyBoundsReceiver == null )
+				this.outputSettings.polyBoundsReceiver = new PolyBounds ();
+		}
 		
 		this.clipOp = operation;
 		this.subjectFill = subjectFill == null ? PolyFill.EvenOdd : subjectFill;

@@ -26,7 +26,7 @@ class ClipOutput implements IClipOutputReceiver {
 			this.polyOut = new ClipOutputPolygon ( spawnIndex );
 		
 		if ( settings.bounds )
-			this.boundsOut = new ClipOutputBounds ( spawnIndex );
+			this.boundsOut = new ClipOutputBounds ( spawnIndex, sharedData, settings );
 		
 		if ( sharedData.monotoneNoHoleOutputInvolved )
 			this.monoOut = new ClipOutputMonotone ( spawnIndex, sharedData, settings );

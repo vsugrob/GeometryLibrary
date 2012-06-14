@@ -1,6 +1,7 @@
 package geom.clipper;
 import flash.display.Graphics;
 import flash.geom.Point;
+import geom.ConcatIterator;
 
 /**
  * ...
@@ -45,6 +46,10 @@ class PolyBounds {
 			
 			lm = lm.next;
 		}
+	}
+	
+	public function clear ():Void {
+		lml = null;
 	}
 	
 	private function initLml ( pts:Iterable <Point>, kind:PolyKind ):Void {
@@ -120,7 +125,7 @@ class PolyBounds {
 				if ( dy != 0 ) {
 					k = dx / dy;
 					
-					if ( !Math.isFinite ( k ) ) {
+					if ( !Math.isFinite ( k ) ) {	// Then edge is indistinguishable from horizontal
 						dy = 0;
 						
 						// p0.y and p1.y slightly differs, fix it.
@@ -340,7 +345,14 @@ class PolyBounds {
 		}
 	}
 	
-	private inline function addLocalMaxima ( edge1:Edge, edge2:Edge, y:Float, kind:PolyKind ):Void {
+	/**
+	 * Creates "point of divergence".
+	 * @param	edge1	Must be an Edge instance created from vertically increasing polygon edge.
+	 * @param	edge2	Must be an Edge instance created from vertically decreasing polygon edge.
+	 * @param	y	Y-coordinate of the point common for both edges.
+	 * @param	kind	Whether edges are clip or subject?
+	 */
+	public inline function addLocalMaxima ( edge1:Edge, edge2:Edge, y:Float, kind:PolyKind ):Void {
 		var lm = new LocalMaxima ( edge1, edge2, y, kind );
 		
 		if ( lml == null )
@@ -353,7 +365,14 @@ class PolyBounds {
 		}
 	}
 	
-	private inline function addLocalMinima ( edge1:Edge, edge2:Edge, x:Float, y:Float ):Void {
+	/**
+	 * Joins edge with LocalMinima instance and sets it to their successor property.
+	 * @param	edge1	Must be an Edge instance created from vertically increasing polygon edge.
+	 * @param	edge2	Must be an Edge instance created from vertically decreasing polygon edge.
+	 * @param	x	X-coordinate of the join point.
+	 * @param	y	Y-coordinate of the join point.
+	 */
+	public inline function addLocalMinima ( edge1:Edge, edge2:Edge, x:Float, y:Float ):Void {
 		var lMin = new LocalMinima ( x, y, edge1, edge2 );
 		edge1.successor = lMin;
 		edge2.successor = lMin;
@@ -370,24 +389,24 @@ class PolyBounds {
 			( Std.int ( Math.random () * 0x80 + 0x5f ) );
 	}
 	
-	public function drawLml ( graphics:Graphics ):Void {
+	public function drawLml ( graphics:Graphics, zoom:Float ):Void {
 		var lm = lml;
 		
 		while ( lm != null ) {
-			drawBound ( graphics, lm.edge1, lm.y );
-			drawBound ( graphics, lm.edge2, lm.y );
+			drawBound ( graphics, lm.edge1, lm.y, zoom );
+			drawBound ( graphics, lm.edge2, lm.y, zoom );
 			
 			graphics.lineStyle ();
 			graphics.beginFill ( 0x00ff00 );
-			graphics.drawCircle ( lm.edge1.bottomX, lm.y, 2 );
+			graphics.drawCircle ( lm.edge1.bottomX, lm.y, 2 / zoom );
 			graphics.endFill ();
 			
 			lm = lm.next;
 		}
 	}
 	
-	private function drawBound ( graphics:Graphics, edge:Edge, startY:Float ):Void {
-		graphics.lineStyle ( 2, getRandomColor () );
+	private function drawBound ( graphics:Graphics, edge:Edge, startY:Float, zoom:Float ):Void {
+		graphics.lineStyle ( 2 / zoom, getRandomColor () );
 		var bottomX = edge.bottomX;
 		
 		do {

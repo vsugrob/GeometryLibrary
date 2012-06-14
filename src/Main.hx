@@ -36,6 +36,7 @@ class Main {
 	static var randomOuputStrokes:Bool;
 	static var emphasizeHoles:Bool;
 	static var outputSettings:ClipOutputSettings;
+	static var polyBoundsOut:PolyBounds;
 	
 	static function testRandomPolyClipping ( frameRate:Float = 100, numTestsPerFrame:UInt = 20, numPoints:UInt = 100 ):Void {
 		var stage = Lib.current.stage;
@@ -848,16 +849,16 @@ class Main {
 			new Point ( 300, 500 ),
 		];
 		
-		subj1.unshift ( new Point ( 200, 400 ) );
-		subj1.unshift ( new Point ( 175, 350 ) );
-		subj1.unshift ( new Point ( 175, 300 ) );
-		subj1.unshift ( new Point ( 210, 275 ) );
-		subj1.push ( new Point ( 250, 275 ) );
-		subj1.push ( new Point ( 400, 0 ) );
+		//subj1.unshift ( new Point ( 200, 400 ) );
+		//subj1.unshift ( new Point ( 175, 350 ) );
+		//subj1.unshift ( new Point ( 175, 300 ) );
+		//subj1.unshift ( new Point ( 210, 275 ) );
+		//subj1.push ( new Point ( 250, 275 ) );
+		//subj1.push ( new Point ( 400, 0 ) );
 		
-		//subj1.push ( new Point ( 500, 200 ) );
-		//subj1.push ( new Point ( 700, 400 ) );
-		//subj1.push ( new Point ( 500, 300 ) );
+		subj1.push ( new Point ( 500, 200 ) );
+		subj1.push ( new Point ( 700, 400 ) );
+		subj1.push ( new Point ( 500, 300 ) );
 		
 		addInputPolygon ( subj1, PolyKind.Subject );
 		clipOp = ClipOperation.Union;*/
@@ -1010,6 +1011,7 @@ class Main {
 					return;
 			}
 			
+			outputSettings.polyBoundsReceiver = new PolyBounds ();
 			clipper = new VattiClipper ( outputSettings );
 			
 			//for ( inputPoly in inputPolys )
@@ -1106,6 +1108,9 @@ class Main {
 			} else if ( kb.keyCode == 86 ) {	// v
 				outputSettings.monotoneNoHoleConvex = !outputSettings.monotoneNoHoleConvex;
 				forceOneClip = true;
+			} else if ( kb.keyCode == 66 ) {	// b
+				outputSettings.bounds = !outputSettings.bounds;
+				forceOneClip = true;
 			}
 		} );
 	}
@@ -1197,6 +1202,9 @@ class Main {
 		
 		if ( outputSettings.monotoneNoHoleTriangles )
 			clipper.drawOutTriangles ( debugSprite.graphics, 1 / zoom );
+		
+		if ( outputSettings.bounds )
+			outputSettings.polyBoundsReceiver.drawLml ( debugSprite.graphics, zoom );
 	}
 	
 	private static function drawInputPolys ( graphics:Graphics, zoom:Float = 1.0 ):Void {

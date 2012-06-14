@@ -51,15 +51,15 @@ class ClipOutputPolygon implements IClipOutputReceiver {
 		points = new ChainedPolygon ( pNode, pNode );
 	}
 	
-	public inline function merge ( poly:ClipOutputPolygon, aelNode1:ActiveEdge, aelNode2:ActiveEdge ):Void {
+	public inline function merge ( other:ClipOutputPolygon, aelNode1:ActiveEdge, aelNode2:ActiveEdge ):Void {
 		if ( aelNode1.side == Side.Right )
-			points.append ( poly.points );
+			points.append ( other.points );
 		else
-			points.prepend ( poly.points );
+			points.prepend ( other.points );
 		
-		if ( this.spawnIndex > poly.spawnIndex ) {
-			this.isHole = poly.isHole;
-			this.parent = poly.parent;
+		if ( this.spawnIndex > other.spawnIndex ) {
+			this.isHole = other.isHole;
+			this.parent = other.parent;
 		}
 	}
 	

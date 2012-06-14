@@ -2,6 +2,7 @@ package geom.clipper.output.monotone;
 import flash.geom.Point;
 import geom.clipper.ActiveEdge;
 import geom.clipper.ClipOutputSettings;
+import geom.clipper.output.OutputSharedData;
 import geom.clipper.Side;
 
 /**
