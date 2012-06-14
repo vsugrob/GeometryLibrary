@@ -21,6 +21,10 @@ import geom.TakeIterator;
 
 class VattiClipper extends PolyBounds {
 	/**
+	 * Pointer to first node of the singly-linked list of scanbeams.
+	 */
+	public var sbl:Scanbeam;
+	/**
 	 * Bottom Y-coordinate of the current scanbeam.
 	 */
 	private var sbBottom:Float;
@@ -109,7 +113,7 @@ class VattiClipper extends PolyBounds {
 			// TODO: no need to process anything
 		}
 		
-		if ( sbl == null )	// Scanbeam list is empty
+		if ( lml == null )	// Input was empty
 			return;
 		
 		this.clipOp = operation;
@@ -120,10 +124,10 @@ class VattiClipper extends PolyBounds {
 			this.outputSettings.monotoneNoHoleOutputInvolved	// Evaluate this property once and store result
 		);
 		
-		sbBottom = popScanbeam ();	// Bottom of the current scanbeam
+		sbBottom = lml.y;	// Bottom of the current scanbeam
 		
 		do {
-			addNewBoundPairs ();		// Modifies ael
+			addNewBoundPairs ();		// Modifies Active Edge List and Scanbeam List
 			processHorizontalEdges ();
 			
 			if ( sbl == null ) {
@@ -145,15 +149,40 @@ class VattiClipper extends PolyBounds {
 		} while ( sbl != null );
 	}
 	
+	private inline function addScanbeam ( y:Float ):Void {
+		var sb = new Scanbeam ( y );
+		
+		if ( sbl == null )
+			sbl = sb;
+		else {
+			sbl.insert ( sb );
+			
+			if ( sb.y > sbl.y )
+				sbl = sb;
+		}
+	}
+	
+	private inline function popScanbeam ():Float {
+		var sb = sbl;
+		sbl = sbl.next;
+		sb.next = null;
+		
+		return	sb.y;
+	}
+	
 	private function addNewBoundPairs ():Void {
 		while ( lml != null && lml.y == sbBottom ) {
+			addScanbeam ( lml.edge1.topY );
+			addScanbeam ( lml.edge2.topY );
+			
 			addEdgesToAel ( lml.edge1, lml.edge2, lml.kind );
 			
 			// Delete bound pair from lml
-			var lm = lml;
 			lml = lml.next;
-			lm.next = null;
 		}
+		
+		if ( lml != null )
+			addScanbeam ( lml.y );
 	}
 	
 	public inline function getFillRule ( kind:PolyKind ):PolyFill {

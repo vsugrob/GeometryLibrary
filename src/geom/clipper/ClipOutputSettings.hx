@@ -9,8 +9,9 @@ class ClipOutputSettings {
 	public var polygons:Bool;
 	public var monotoneNoHoleTriangles:Bool;
 	public var monotoneNoHoleConvex:Bool;
-	public var bounds:Bool;
 	public var monotoneNoHolePolygons:Bool;
+	public var bounds:Bool;
+	public var boundsKind:PolyKind;
 	
 	public var monotoneNoHoleOutputInvolved (getMonotoneNoHoleOutputInvolved, null):Bool;
 	private inline function getMonotoneNoHoleOutputInvolved ():Bool {
@@ -19,16 +20,18 @@ class ClipOutputSettings {
 	
 	public var noOutput (getNoOutput, null):Bool;
 	private inline function getNoOutput ():Bool {
-		return	!( polygons || monotoneNoHoleTriangles || monotoneNoHoleConvex || bounds || monotoneNoHolePolygons );
+		return	!( polygons || monotoneNoHoleTriangles || monotoneNoHoleConvex || monotoneNoHolePolygons || bounds );
 	}
 	
 	public function new ( generatePolygons:Bool = true, generateMonotoneNoHoleTriangles:Bool = false,
-		generateMonotoneNoHoleConvex:Bool = false, generateBounds:Bool = false, generateMonotoneNoHolePolygons:Bool = false )
+		generateMonotoneNoHoleConvex:Bool = false, generateMonotoneNoHolePolygons:Bool = false,
+		generateBounds:Bool = false, boundsKind:PolyKind = null )
 	{
 		this.polygons = generatePolygons;
 		this.monotoneNoHoleTriangles = generateMonotoneNoHoleTriangles;
 		this.monotoneNoHoleConvex = generateMonotoneNoHoleConvex;
-		this.bounds = generateBounds;
 		this.monotoneNoHolePolygons = generateMonotoneNoHolePolygons;
+		this.bounds = generateBounds;
+		this.boundsKind = boundsKind == null ? PolyKind.Subject : boundsKind;
 	}
 }

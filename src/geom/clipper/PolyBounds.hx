@@ -12,17 +12,13 @@ class PolyBounds {
 	 * Pointer to first node of the singly-linked list of local maximas.
 	 */
 	public var lml:LocalMaxima;
-	/**
-	 * Pointer to first node of the singly-linked list of scanbeams.
-	 */
-	public var sbl:Scanbeam;
 	
 	public function new ( poly:Iterable <Point> = null, kind:PolyKind = null ) {
 		if ( poly != null ) {
 			if ( kind == null )
 				kind = PolyKind.Subject;
 			
-			initLmlAndSbl ( poly, kind );
+			initLml ( poly, kind );
 		}
 	}
 	
@@ -38,7 +34,7 @@ class PolyBounds {
 	 * Also remember about restriction when dx or dy is infinite.
 	 */
 	public function addPolygon ( poly:Iterable <Point>, kind:PolyKind ):Void {
-		initLmlAndSbl ( poly, kind );
+		initLml ( poly, kind );
 	}
 	
 	public function addPolyBounds ( polyBounds:PolyBounds ):Void {
@@ -51,7 +47,7 @@ class PolyBounds {
 		}
 	}
 	
-	private function initLmlAndSbl ( pts:Iterable <Point>, kind:PolyKind ):Void {
+	private function initLml ( pts:Iterable <Point>, kind:PolyKind ):Void {
 		var it:Iterator <Point> = pts.iterator ();
 		
 		if ( !it.hasNext () )
@@ -355,37 +351,12 @@ class PolyBounds {
 			if ( lm.y >= lml.y )
 				lml = lm;
 		}
-		
-		addScanbeam ( y );
-		addScanbeam ( edge1.topY );
-		addScanbeam ( edge2.topY );
 	}
 	
 	private inline function addLocalMinima ( edge1:Edge, edge2:Edge, x:Float, y:Float ):Void {
 		var lMin = new LocalMinima ( x, y, edge1, edge2 );
 		edge1.successor = lMin;
 		edge2.successor = lMin;
-	}
-	
-	private inline function addScanbeam ( y:Float ):Void {
-		var sb = new Scanbeam ( y );
-		
-		if ( sbl == null )
-			sbl = sb;
-		else {
-			sbl.insert ( sb );
-			
-			if ( sb.y > sbl.y )
-				sbl = sb;
-		}
-	}
-	
-	private inline function popScanbeam ():Float {
-		var sb = sbl;
-		sbl = sbl.next;
-		sb.next = null;
-		
-		return	sb.y;
 	}
 	
 	private inline function reverseHorizontalEdge ( edge:Edge ):Void {
