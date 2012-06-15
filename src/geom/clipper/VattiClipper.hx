@@ -385,14 +385,14 @@ class VattiClipper extends PolyBounds {
 		
 		if ( thisFill == PolyFill.NonZero ) {
 			// At this point order of aelNode1 and aelNode2 could be changed
-			aelWinNode1 = cast ( aelNode1, ActiveWindingEdge );
-			aelWinNode2 = cast ( aelNode2, ActiveWindingEdge );
+			aelWinNode1 = aelNode1.asWindingEdge;
+			aelWinNode2 = aelNode2.asWindingEdge;
 			
 			aelWinNode1.windingSum = thisWindingSum + aelWinNode1.winding;
 			aelWinNode2.windingSum = aelWinNode1.windingSum + aelWinNode2.winding;
 			
 			if ( aelWinNode1.windingSum == 0 || aelWinNode2.windingSum == 0 ) {
-				// If one thisWindingSum is zero then other is either +1 or -1
+				// If one windingSum is zero then other is either +1 or -1
 				aelWinNode1.isGhost = false;
 				aelWinNode2.isGhost = false;
 			} else {

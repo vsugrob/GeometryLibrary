@@ -106,7 +106,7 @@ class PolyBounds {
 		var firstEdge:Edge = null;
 		var lastEdge:Edge = null;
 		
-		if ( extrIdx == 0 )			// 1-point polygon
+		if ( extrIdx == 0 )			// 1-point polygon or polygon with all its points coincident
 			return;
 		else if ( !extrFound ) {	// Monotone polyline
 			it = pts.iterator ();
@@ -171,8 +171,10 @@ class PolyBounds {
 					pLast.x = lastEdge.bottomX;
 					reverseHorizontalEdge ( lastEdge );
 					prevEdge = prePrevEdge;
-				} else
+				} else {
 					lastEdge = new Edge ( pFirst.x, pFirst.y, dx );
+					lastEdge.isHorizontal = true;
+				}
 			} else {
 				// Last edge cannot be neither horizontal nor zero-length
 				k = ( pLast.x - pFirst.x ) / ( pLast.y - pFirst.y );

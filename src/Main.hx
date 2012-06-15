@@ -807,7 +807,7 @@ class Main {
 		
 		addInputPolygon ( clip, PolyKind.Clip );*/
 		
-		// Test: cross in circle nonzero test
+		/*// Test: cross in circle nonzero test
 		var subj1 = [
 			new Point ( 0, 400 ),
 			new Point ( 400, 0 ),
@@ -842,7 +842,7 @@ class Main {
 			new Point ( 400, 100 ),
 		];
 		
-		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( clip, PolyKind.Clip );*/
 		
 		/*// Test: simple triangulation test
 		var subj1 = [
@@ -888,7 +888,7 @@ class Main {
 		addInputPolygon ( subj3, PolyKind.Subject );
 		clipOp = ClipOperation.Union;*/
 		
-		/*// Test: poly with concave hole triangulation
+		// Test: poly with concave hole triangulation
 		var subj1 = [
 			new Point ( 300, 0 ),
 			new Point ( 600, 300 ),
@@ -912,7 +912,7 @@ class Main {
 		addInputPolygon ( subj1, PolyKind.Subject );
 		addInputPolygon ( subj2, PolyKind.Subject );
 		addInputPolygon ( subj3, PolyKind.Subject );
-		clipOp = ClipOperation.Union;*/
+		clipOp = ClipOperation.Union;
 		
 		/*// Test: polys which intersection leads to
 		// topX () call on horizontal edge in convex and
@@ -938,6 +938,21 @@ class Main {
 		
 		addInputPolygon ( subj, PolyKind.Subject );
 		addInputPolygon ( clip, PolyKind.Clip );
+		clipOp = ClipOperation.Intersection;*/
+		
+		/*// Test: degenerate intersection
+		var subj = [
+			new Point ( 200, 100 ),
+			new Point ( 100, 100 ),
+		];
+		
+		var clip = [
+			new Point ( 200, 100 ),
+			new Point ( 300, 100 ),
+		];
+		
+		addInputPolygon ( clip, PolyKind.Clip );
+		addInputPolygon ( subj, PolyKind.Subject );
 		clipOp = ClipOperation.Intersection;*/
 		
 		/*var angle = 0.0;

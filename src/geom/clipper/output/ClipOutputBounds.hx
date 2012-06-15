@@ -83,7 +83,6 @@ class ClipOutputBounds implements IClipOutputReceiver {
 		return	successor;
 	}
 	
-	// TODO: handle 1-point and other degenerate cases!
 	public inline function addLocalMin ( aelNode1:ActiveEdge, aelNode2:ActiveEdge, p:Point ):Void {
 		var boundsOut1 = aelNode1.output.boundsOut;
 		var boundsOut2 = aelNode2.output.boundsOut;
