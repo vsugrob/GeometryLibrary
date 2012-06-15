@@ -48,6 +48,16 @@ class PolyBounds {
 		}
 	}
 	
+	public function swapKinds ():Void {
+		var lm = lml;
+		
+		while ( lm != null ) {
+			lm.kind = lm.kind == PolyKind.Subject ? PolyKind.Clip : PolyKind.Subject;
+			
+			lm = lm.next;
+		}
+	}
+	
 	public function clear ():Void {
 		lml = null;
 	}

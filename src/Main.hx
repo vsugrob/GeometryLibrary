@@ -62,6 +62,9 @@ class Main {
 				
 				clipper.clip ( clipOp, subjectFill, clipFill );
 				
+				if ( outputSettings.bounds )
+					outputSettings.polyBoundsReceiver.clear ();
+				
 				var endTime:Float = Date.now ().getTime ();
 				var timeDelta:Float = endTime - startTime;
 				timeElapsed += timeDelta;
@@ -170,8 +173,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		/*testRandomPolyClipping ( 100, 100, 10 );
-		return;*/
+		testRandomPolyClipping ( 100, 100, 10 );
+		return;
 		
 		/*testRandomPolyClippingWithPolyBounds ( 100, 100, 10 );
 		return;*/
