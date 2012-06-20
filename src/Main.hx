@@ -4,12 +4,19 @@ import flash.desktop.Clipboard;
 import flash.desktop.ClipboardFormats;
 import flash.display.Graphics;
 import flash.display.Sprite;
+import flash.display.Stage3D;
 import flash.display.StageAlign;
 import flash.display.StageScaleMode;
+import flash.display3D.Context3D;
+import flash.display3D.IndexBuffer3D;
+import flash.display3D.VertexBuffer3D;
+import flash.events.ErrorEvent;
 import flash.events.Event;
 import flash.events.KeyboardEvent;
+import flash.geom.Matrix3D;
 import flash.geom.Point;
 import flash.Lib;
+import flash.Vector;
 import geom.clipper.ClipOperation;
 import geom.clipper.ClipOutputSettings;
 import geom.clipper.output.ClipOutput;
@@ -145,6 +152,13 @@ class Main {
 	}
 	
 	static function main () {
+		var stage = Lib.current.stage;
+		stage.scaleMode = StageScaleMode.NO_SCALE;
+		stage.align = StageAlign.TOP_LEFT;
+		
+		/*Stage3DTest.test ( stage );
+		return;*/
+		
 		forceOneClip = true;
 		
 		clipOp = ClipOperation.Intersection;
@@ -156,10 +170,6 @@ class Main {
 		clipFill = PolyFill.EvenOdd;
 		
 		outputSettings = new ClipOutputSettings ( true, false, false, false, false );
-		
-		var stage = Lib.current.stage;
-		stage.scaleMode = StageScaleMode.NO_SCALE;
-		stage.align = StageAlign.TOP_LEFT;
 		
 		debugSprite = new Sprite ();
 		debugSprite.x = 400;
@@ -173,8 +183,8 @@ class Main {
 		
 		inputPolys = new List <InputPolygon> ();
 		
-		testRandomPolyClipping ( 100, 100, 10 );
-		return;
+		/*testRandomPolyClipping ( 100, 100, 10 );
+		return;*/
 		
 		/*testRandomPolyClippingWithPolyBounds ( 100, 100, 10 );
 		return;*/
