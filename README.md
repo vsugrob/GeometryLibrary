@@ -13,5 +13,4 @@ This library successfully handles input of any complexity.
 Input polygons are free to suffer from any imaginable degeneracy.
 Vertices can be coincident, collinear, float-epsilon-close to each other.
 Contours can be self-intersecting,
-segments can be one on top of another.
-They can even duplicate each other.
+segments can be on top of each other.
