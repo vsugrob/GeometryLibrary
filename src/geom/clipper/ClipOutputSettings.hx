@@ -17,13 +17,13 @@ class ClipOutputSettings {
 	 */
 	public var polyBoundsReceiver:PolyBounds;
 	
-	public var monotoneNoHoleOutputInvolved (getMonotoneNoHoleOutputInvolved, null):Bool;
-	private inline function getMonotoneNoHoleOutputInvolved ():Bool {
+	public var monotoneNoHoleOutputInvolved (get_monotoneNoHoleOutputInvolved, null):Bool;
+	private inline function get_monotoneNoHoleOutputInvolved ():Bool {
 		return	monotoneNoHoleTriangles || monotoneNoHoleConvex || monotoneNoHolePolygons;
 	}
 	
-	public var noOutput (getNoOutput, null):Bool;
-	private inline function getNoOutput ():Bool {
+	public var noOutput (get_noOutput, null):Bool;
+	private inline function get_noOutput ():Bool {
 		return	!( polygons || monotoneNoHoleTriangles || monotoneNoHoleConvex || monotoneNoHolePolygons || bounds );
 	}
 	

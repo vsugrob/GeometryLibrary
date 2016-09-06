@@ -13,9 +13,9 @@ class DebugPolyMorpher {
 	private var center:Point;
 	public var stopped:Bool;
 	
-	public var rotationVelocity ( getRotVel, setRotVel ):Float;
-	private function getRotVel ():Float { return	rotVel * 180.0 / Math.PI; }
-	private function setRotVel ( value:Float ):Float { return	rotVel = value * Math.PI / 180.0; }
+	public var rotationVelocity ( get_rotationVelocity, set_rotationVelocity ):Float;
+	private function get_rotationVelocity ():Float { return	rotVel * 180.0 / Math.PI; }
+	private function set_rotationVelocity ( value:Float ):Float { return	rotVel = value * Math.PI / 180.0; }
 	
 	public function new ( inputPolys:List <InputPolygon>, rotationVelocity:Float = 90.0 ) {
 		this.inputPolys = inputPolys;

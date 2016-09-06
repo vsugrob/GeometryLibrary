@@ -14,13 +14,13 @@ class MonotoneConvexColumn {
 	public var polys:DoublyList <ChainedPolygon>;
 	
 	private var monoColumn:MonotoneColumn;
-	private var leftBound (getLeftBound, null):OutputBound;
-	private inline function getLeftBound ():OutputBound {
+	private var leftBound (get_leftBound, null):OutputBound;
+	private inline function get_leftBound ():OutputBound {
 		return	monoColumn.leftBound;
 	}
 	
-	private var rightBound (getRightBound, null):OutputBound;
-	private inline function getRightBound ():OutputBound {
+	private var rightBound (get_rightBound, null):OutputBound;
+	private inline function get_rightBound ():OutputBound {
 		return	monoColumn.rightBound;
 	}
 	

@@ -15,8 +15,8 @@ class MonotoneColumn {
 	public var trianglesColumn:MonotoneTrianglesColumn;
 	public var convexColumn:MonotoneConvexColumn;
 	public var leftBound:OutputBound;
-	public var rightBound (getRightBound, null):OutputBound;
-	private inline function getRightBound ():OutputBound {
+	public var rightBound (get_rightBound, null):OutputBound;
+	private inline function get_rightBound ():OutputBound {
 		return	leftBound.next;
 	}
 	

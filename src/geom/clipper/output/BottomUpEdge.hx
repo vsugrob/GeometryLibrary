@@ -8,13 +8,13 @@ import geom.clipper.ActiveEdge;
  */
 
 class BottomUpEdge {
-	public static inline var LeftHorizontal:Float = Math.POSITIVE_INFINITY;
-	public static inline var RightHorizontal:Float = Math.NEGATIVE_INFINITY;
+	public static var LeftHorizontal:Float = Math.POSITIVE_INFINITY;
+	public static var RightHorizontal:Float = Math.NEGATIVE_INFINITY;
 	public var bottomX:Float;
 	public var bottomY:Float;
 	public var dx:Float;
-	public var isHorizontal (getIsHorizontal, null):Bool;
-	private inline function getIsHorizontal ():Bool {
+	public var isHorizontal (get_isHorizontal, null):Bool;
+	private inline function get_isHorizontal ():Bool {
 		return	!Math.isFinite ( dx );
 	}
 	

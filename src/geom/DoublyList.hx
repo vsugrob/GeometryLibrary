@@ -8,8 +8,8 @@ package geom;
 class DoublyList <TElement> {
 	public var first:DoublyListNode <TElement>;
 	public var last:DoublyListNode <TElement>;
-	public var isEmpty (getIsEmpty, null):Bool;
-	private inline function getIsEmpty ():Bool {
+	public var isEmpty (get_isEmpty, null):Bool;
+	private inline function get_isEmpty ():Bool {
 		return	first == null && last == null;
 	}
 	
